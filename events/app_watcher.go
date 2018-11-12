@@ -10,11 +10,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-//go:generate counterfeiter -o mocks/appWatcher_process.go . AppWatcherProcess
-type AppWatcherProcess interface {
-	Run() error
-}
-
 type AppWatcher struct {
 	config             *cfclient.Config
 	cfClient           *cfclient.Client
