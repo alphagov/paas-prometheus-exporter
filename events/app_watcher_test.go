@@ -1,4 +1,3 @@
-// given that I've made a new app watcher, When I call appName, I get the app name
 package events
 
 import (
