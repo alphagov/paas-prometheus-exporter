@@ -13,6 +13,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
+//go:generate counterfeiter -o mocks/mock_registerer.go . prometheus.Registerer
+
 var _ = Describe("AppWatcher", func() {
 	var (
 		appWatcher *AppWatcher
@@ -48,6 +50,35 @@ var _ = Describe("AppWatcher", func() {
 	Describe("AppName", func() {
 		It("knows the name of its application", func() {
 			Expect(appWatcher.AppName()).To(Equal("foo"))
+		})
+	})
+
+	Describe("Run", func() {
+		It("Registers metrics on startup", func() {
+			go appWatcher.Run()
+			defer {
+				appWatcher.Close()
+			}
+
+			Expect(registerer.MustRegister()).ToHaveBeenCalledWith(appWatcher.metricsForInstance[0].cpu)
+		})
+	})
+
+	Describe("Run", func() {
+		It("Unregisters metrics on close", func() {
+			//
+		})
+	})
+
+	Describe("Run", func() {
+		It("Registers more metrics when new instances are created", func() {
+			//
+		})
+	})
+
+	Describe("Run", func() {
+		It("Unregisters some metrics when old instances are deleted", func() {
+			//
 		})
 	})
 
