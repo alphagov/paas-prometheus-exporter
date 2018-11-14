@@ -88,9 +88,7 @@ var _ = Describe("AppWatcher", func() {
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 		})
-	})
 
-	Describe("mainLoop", func() {
 		It("Unregisters metrics on close", func() {
 			go appWatcher.mainLoop(nil, nil)
 
@@ -98,9 +96,7 @@ var _ = Describe("AppWatcher", func() {
 
 			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})
-	})
 
-	Describe("mainLoop", func() {
 		It("Registers more metrics when new instances are created", func() {
 			go appWatcher.mainLoop(nil, nil)
 			defer appWatcher.Close()
@@ -116,9 +112,7 @@ var _ = Describe("AppWatcher", func() {
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 		})
-	})
 
-	Describe("mainLoop", func() {
 		It("Unregisters some metrics when old instances are deleted", func() {
 			go appWatcher.mainLoop(nil, nil)
 			defer appWatcher.Close()
