@@ -1,4 +1,4 @@
-# paas-metric-exporter
+# paas-prometheus-exporter
 
 This application consumes container metrics off the Cloud Foundry Doppler daemon, processes them based on the provided metrics template, and then sends them to a StatsD endpoint.
 
