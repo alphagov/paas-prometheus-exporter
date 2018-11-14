@@ -1,20 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"net/http"
-	"net/url"
-
-	//"strings"
 	"time"
 
-	"github.com/alphagov/paas-prometheus-exporter/events"
-	"github.com/cloudfoundry-community/go-cfclient"
-
-	// sonde_events "github.com/cloudfoundry/sonde-go/events"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+  "github.com/alphagov/paas-prometheus-exporter/app"
 	"gopkg.in/alecthomas/kingpin.v2"
 	// "os"
 )
@@ -43,82 +32,8 @@ var (
 	locketClientKey    = kingpin.Flag("locket-client-key", "File path to Locket client key.").Default("").OverrideDefaultFromEnvar("LOCKET_CLIENT_KEY").String()
 )
 
-var appWatchers = make(map[string]*events.AppWatcher)
-
-func createNewWatcher(config *cfclient.Config, app cfclient.App) {
-	appWatcher := events.NewAppWatcher(config, app, prometheus.WrapRegistererWith(
-		prometheus.Labels{"guid": app.Guid, "app": app.Name},
-		prometheus.DefaultRegisterer,
-	))
-	appWatchers[app.Guid] = appWatcher
-	go appWatcher.Run()
-}
-
-func checkForNewApps(cf *cfclient.Client, config *cfclient.Config) error {
-	apps, err := cf.ListAppsByQuery(url.Values{})
-	if err != nil {
-		return err
-	}
-
-	running := map[string]bool{}
-
-	for _, app := range apps {
-		running[app.Guid] = true
-
-		appWatcher, present := appWatchers[app.Guid]
-		if present {
-			if appWatcher.AppName() != app.Name {
-				// Name changed, stop and restart
-				appWatcher.Close()
-				createNewWatcher(config, app)
-			} else {
-				// notify watcher that instances may have changed
-				appWatcher.UpdateApp(app)
-			}
-		} else {
-			// new app
-			createNewWatcher(config, app)
-		}
-	}
-
-	for appGuid, appWatcher := range appWatchers {
-		if ok := running[appGuid]; !ok {
-			appWatcher.Close()
-			delete(appWatchers, appGuid)
-		}
-	}
-	return nil
-}
-
 func main() {
 	kingpin.Parse()
 
-	config := &cfclient.Config{
-		ApiAddress:        *apiEndpoint,
-		SkipSslValidation: *skipSSLValidation,
-		Username:          *username,
-		Password:          *password,
-		ClientID:          *clientID,
-		ClientSecret:      *clientSecret,
-	}
-
-	cf, err := cfclient.NewClient(config)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	go func() {
-		for {
-			log.Println("checking for new apps")
-			err := checkForNewApps(cf, config)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			time.Sleep(time.Duration(*updateFrequency) * time.Second)
-		}
-	}()
-
-	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *prometheusBindPort), nil))
+	app.StartApp(*apiEndpoint, *skipSSLValidation, *username, *password, *clientID, *clientSecret, time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
 }
