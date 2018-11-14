@@ -49,7 +49,7 @@ func NewAppWatcher(
 		config:             config,
 		app:                app,
 		registerer:         registerer,
-		appUpdateChan:      make(chan cfclient.App),
+		appUpdateChan:      make(chan cfclient.App, 5),
 	}
 	appWatcher.scaleTo(app.Instances)
 	return appWatcher
