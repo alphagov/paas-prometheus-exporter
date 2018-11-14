@@ -3,7 +3,7 @@ package app_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/ghttp"
+	//. "github.com/onsi/gomega/ghttp"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 
@@ -13,13 +13,18 @@ import (
 
 var _ = Describe("CheckForNewAppsNew", func() {
 
-	var fakeClient mocks.FakeCFClient
+	var fakeClient *mocks.FakeCFClient
+
+	var 
 
 	BeforeEach(func() {
-		fakeClient = mocks.FakeCFClient{}
+		fakeClient = &mocks.FakeCFClient{}
 	})
 
-	It("creates a new app", func() {
+	FIt("creates a new app", func() {
+		fakeClient.ListAppsByQueryReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil )
 
 		apps := []cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
@@ -33,10 +38,11 @@ var _ = Describe("CheckForNewAppsNew", func() {
 		// Mock out `events.NewAppWatcher` to capture arguments passed to it.
 	})
 
-	It("does a thing", func() {
-		client := cfclient.NewClient(&cfclient.Config{})
-		fakeClient
-		apps, err := app.Test(client)
+	FIt("does a thing", func() {
+		fakeClient.ListAppsByQueryReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil )
+		apps, err := app.Test(fakeClient)
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(len(apps)).To(Equal(2))
