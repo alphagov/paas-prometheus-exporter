@@ -17,6 +17,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+//go:generate counterfeiter -o mocks/cfclient.go . CFClient
+type CFClient interface {
+	ListAppsByQuery() ([]cfclient.App, error)
+}
+
 var appWatchers = make(map[string]*events.AppWatcher)
 
 func createNewWatcher(config *cfclient.Config, app cfclient.App) {
@@ -28,19 +33,24 @@ func createNewWatcher(config *cfclient.Config, app cfclient.App) {
 	go appWatcher.Run()
 }
 
+func Test(client CFClient) ([]cfclient.App, error) {
+	return client.ListAppsByQuery()
+}
+
 func checkForNewApps(cf *cfclient.Client, config *cfclient.Config) error {
 	apps, err := cf.ListAppsByQuery(url.Values{})
 	if err != nil {
 		return err
 	}
 
-	return checkForNewAppsNew(apps, config)
+	return CheckForNewAppsNew(apps, config)
 }
 
-func checkForNewAppsNew(apps []cfclient.App, config *cfclient.Config) error {
+func CheckForNewAppsNew(apps []cfclient.App, config *cfclient.Config) error {
 	running := map[string]bool{}
 
 	for _, app := range apps {
+		// Do we need to check they're running or does the API return all of them?
 		running[app.Guid] = true
 
 		appWatcher, present := appWatchers[app.Guid]
