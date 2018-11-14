@@ -11,42 +11,28 @@ import (
 	"github.com/alphagov/paas-prometheus-exporter/exporter/mocks"
 )
 
-var _ = Describe("CheckForNewAppsNew", func() {
+var _ = Describe("CheckForNewApps", func() {
 
 	var fakeClient *mocks.FakeCFClient
-
-	var 
 
 	BeforeEach(func() {
 		fakeClient = &mocks.FakeCFClient{}
 	})
 
-	FIt("creates a new app", func() {
+	It("creates a new app", func() {
 		fakeClient.ListAppsByQueryReturns([]cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}, nil )
-
-		apps := []cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
-		}
 
 		config := &cfclient.Config{}
 
-		exporter.CheckForNewAppsNew(apps, config)
+		e := exporter.New(fakeClient, config)
 
-		// Test that a new watcher is created.
-		// Mock out `events.NewAppWatcher` to capture arguments passed to it.
+		e.CheckForNewApps()
+
+		Expect(e.WatcherCount()).To(Equal(1))
 	})
 
-	FIt("does a thing", func() {
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
-		}, nil )
-		apps, err := exporter.Test(fakeClient)
-
-		Expect(err).ToNot(HaveOccurred())
-		Expect(len(apps)).To(Equal(2))
-	})
 })
 
 // test we hope to write

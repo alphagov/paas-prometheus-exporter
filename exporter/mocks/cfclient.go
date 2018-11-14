@@ -2,6 +2,7 @@
 package mocks
 
 import (
+	url "net/url"
 	sync "sync"
 
 	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
@@ -9,9 +10,10 @@ import (
 )
 
 type FakeCFClient struct {
-	ListAppsByQueryStub        func() ([]cfclient.App, error)
+	ListAppsByQueryStub        func(url.Values) ([]cfclient.App, error)
 	listAppsByQueryMutex       sync.RWMutex
 	listAppsByQueryArgsForCall []struct {
+		arg1 url.Values
 	}
 	listAppsByQueryReturns struct {
 		result1 []cfclient.App
@@ -25,15 +27,16 @@ type FakeCFClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCFClient) ListAppsByQuery() ([]cfclient.App, error) {
+func (fake *FakeCFClient) ListAppsByQuery(arg1 url.Values) ([]cfclient.App, error) {
 	fake.listAppsByQueryMutex.Lock()
 	ret, specificReturn := fake.listAppsByQueryReturnsOnCall[len(fake.listAppsByQueryArgsForCall)]
 	fake.listAppsByQueryArgsForCall = append(fake.listAppsByQueryArgsForCall, struct {
-	}{})
-	fake.recordInvocation("ListAppsByQuery", []interface{}{})
+		arg1 url.Values
+	}{arg1})
+	fake.recordInvocation("ListAppsByQuery", []interface{}{arg1})
 	fake.listAppsByQueryMutex.Unlock()
 	if fake.ListAppsByQueryStub != nil {
-		return fake.ListAppsByQueryStub()
+		return fake.ListAppsByQueryStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -48,10 +51,17 @@ func (fake *FakeCFClient) ListAppsByQueryCallCount() int {
 	return len(fake.listAppsByQueryArgsForCall)
 }
 
-func (fake *FakeCFClient) ListAppsByQueryCalls(stub func() ([]cfclient.App, error)) {
+func (fake *FakeCFClient) ListAppsByQueryCalls(stub func(url.Values) ([]cfclient.App, error)) {
 	fake.listAppsByQueryMutex.Lock()
 	defer fake.listAppsByQueryMutex.Unlock()
 	fake.ListAppsByQueryStub = stub
+}
+
+func (fake *FakeCFClient) ListAppsByQueryArgsForCall(i int) url.Values {
+	fake.listAppsByQueryMutex.RLock()
+	defer fake.listAppsByQueryMutex.RUnlock()
+	argsForCall := fake.listAppsByQueryArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeCFClient) ListAppsByQueryReturns(result1 []cfclient.App, result2 error) {

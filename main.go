@@ -1,8 +1,10 @@
 package main
 
 import (
+	"log"
 	"time"
 
+	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/alphagov/paas-prometheus-exporter/exporter"
 	"gopkg.in/alecthomas/kingpin.v2"
 	// "os"
@@ -35,5 +37,20 @@ var (
 func main() {
 	kingpin.Parse()
 
-	exporter.StartApp(*apiEndpoint, *skipSSLValidation, *username, *password, *clientID, *clientSecret, time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
+	config := &cfclient.Config{
+		ApiAddress:        *apiEndpoint,
+		SkipSslValidation: *skipSSLValidation,
+		Username:          *username,
+		Password:          *password,
+		ClientID:          *clientID,
+		ClientSecret:      *clientSecret,
+	}
+
+	cf, err := cfclient.NewClient(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	e := exporter.New(cf, config)
+	e.Start(time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
 }
