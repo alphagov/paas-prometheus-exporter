@@ -20,3 +20,10 @@ var _ = Describe("checkForNewAppsNew", func() {
 		Expect(1).To(Equal(1))
 	})
 })
+
+// test we hope to write
+
+// when an app is created we crate an app AppWatcher
+// when it's deleted we delete the appWatcher
+// when an app is renamed we delete the old watcher and create a new one
+// when an app is scaled we tell the app watcher
