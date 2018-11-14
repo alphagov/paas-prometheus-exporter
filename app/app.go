@@ -15,7 +15,6 @@ import (
 	// sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 )
 
 var appWatchers = make(map[string]*events.AppWatcher)
@@ -35,6 +34,10 @@ func checkForNewApps(cf *cfclient.Client, config *cfclient.Config) error {
 		return err
 	}
 
+	return checkForNewAppsNew(apps, config)
+}
+
+func checkForNewAppsNew(apps []cfclient.App, config *cfclient.Config) error {
 	running := map[string]bool{}
 
 	for _, app := range apps {
