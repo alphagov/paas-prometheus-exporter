@@ -4,7 +4,7 @@ package mocks
 import (
 	sync "sync"
 
-	app "github.com/alphagov/paas-prometheus-exporter/app"
+	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
 )
 
@@ -104,4 +104,4 @@ func (fake *FakeCFClient) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ app.CFClient = new(FakeCFClient)
+var _ exporter.CFClient = new(FakeCFClient)

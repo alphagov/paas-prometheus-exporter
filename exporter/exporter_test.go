@@ -1,4 +1,4 @@
-package app_test
+package exporter_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,8 +7,8 @@ import (
 
 	"github.com/cloudfoundry-community/go-cfclient"
 
-	"github.com/alphagov/paas-prometheus-exporter/app"
-	"github.com/alphagov/paas-prometheus-exporter/app/mocks"
+	"github.com/alphagov/paas-prometheus-exporter/exporter"
+	"github.com/alphagov/paas-prometheus-exporter/exporter/mocks"
 )
 
 var _ = Describe("CheckForNewAppsNew", func() {
@@ -32,7 +32,7 @@ var _ = Describe("CheckForNewAppsNew", func() {
 
 		config := &cfclient.Config{}
 
-		app.CheckForNewAppsNew(apps, config)
+		exporter.CheckForNewAppsNew(apps, config)
 
 		// Test that a new watcher is created.
 		// Mock out `events.NewAppWatcher` to capture arguments passed to it.
@@ -42,7 +42,7 @@ var _ = Describe("CheckForNewAppsNew", func() {
 		fakeClient.ListAppsByQueryReturns([]cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}, nil )
-		apps, err := app.Test(fakeClient)
+		apps, err := exporter.Test(fakeClient)
 
 		Expect(err).ToNot(HaveOccurred())
 		Expect(len(apps)).To(Equal(2))

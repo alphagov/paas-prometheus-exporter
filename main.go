@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-  "github.com/alphagov/paas-prometheus-exporter/app"
+	"github.com/alphagov/paas-prometheus-exporter/exporter"
 	"gopkg.in/alecthomas/kingpin.v2"
 	// "os"
 )
@@ -35,5 +35,5 @@ var (
 func main() {
 	kingpin.Parse()
 
-	app.StartApp(*apiEndpoint, *skipSSLValidation, *username, *password, *clientID, *clientSecret, time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
+	exporter.StartApp(*apiEndpoint, *skipSSLValidation, *username, *password, *clientID, *clientSecret, time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
 }
