@@ -81,30 +81,65 @@ var _ = Describe("AppWatcher", func() {
 		})
 	})
 
-	Describe("Run", func() {
+	Describe("mainLoop", func() {
 		It("Registers metrics on startup", func() {
-			go appWatcher.Run()
+			go appWatcher.mainLoop(nil, nil)
 			defer appWatcher.Close()
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 		})
 	})
 
-	Describe("Run", func() {
+	Describe("mainLoop", func() {
 		It("Unregisters metrics on close", func() {
-			//
+			go appWatcher.mainLoop(nil, nil)
+
+			appWatcher.Close()
+
+			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})
 	})
 
-	Describe("Run", func() {
+	Describe("mainLoop", func() {
 		It("Registers more metrics when new instances are created", func() {
-			//
+			go appWatcher.mainLoop(nil, nil)
+			defer appWatcher.Close()
+
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
+
+			appWatcher.UpdateApp(cfclient.App{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 2,
+				Name: "foo",
+				SpaceURL: "/v2/spaces/123",
+			})
+
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 		})
 	})
 
-	Describe("Run", func() {
+	Describe("mainLoop", func() {
 		It("Unregisters some metrics when old instances are deleted", func() {
-			//
+			go appWatcher.mainLoop(nil, nil)
+			defer appWatcher.Close()
+
+			appWatcher.UpdateApp(cfclient.App{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 2,
+				Name: "foo",
+				SpaceURL: "/v2/spaces/123",
+			})
+
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
+
+			appWatcher.UpdateApp(cfclient.App{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 1,
+				Name: "foo",
+				SpaceURL: "/v2/spaces/123",
+			})
+
+			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})
 	})
 

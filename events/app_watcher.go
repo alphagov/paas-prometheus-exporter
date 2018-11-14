@@ -89,6 +89,7 @@ func (m *AppWatcher) Run() error {
 	tlsConfig := tls.Config{InsecureSkipVerify: false} // TODO: is this needed?
 	conn := consumer.New(m.cfClient.Endpoint.DopplerEndpoint, &tlsConfig, nil)
 	conn.RefreshTokenFrom(m)
+	defer conn.Close()
 
 	authToken, err := m.cfClient.GetToken()
 	if err != nil {
@@ -97,14 +98,18 @@ func (m *AppWatcher) Run() error {
 
 	msgs, errs := conn.Stream(m.app.Guid, authToken)
 
-	// log.Printf("Started reading %s events\n", app.Name)
+	return m.mainLoop(msgs, errs)
+}
+
+func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan error) error {
 	for {
 		select {
 		case message, ok := <-msgs:
 			if !ok {
 				// delete all instances
-
-				return nil
+				m.Close()
+				msgs = nil
+				continue
 			}
 			switch message.GetEventType() {
 			case sonde_events.Envelope_ContainerMetric:
@@ -118,14 +123,11 @@ func (m *AppWatcher) Run() error {
 			if err == nil {
 				continue
 			}
-			// TODO: do something with errors
-			break
-			// m.errorChan <- err
+			return err
 		case updatedApp, ok := <-m.appUpdateChan:
 			if !ok {
-				conn.Close()
 				m.scaleTo(0)
-				break
+				return nil
 			}
 
 			if updatedApp.Instances != m.app.Instances {
