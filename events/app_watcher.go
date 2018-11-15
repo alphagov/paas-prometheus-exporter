@@ -71,7 +71,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 			}
 			switch message.GetEventType() {
 			case sonde_events.Envelope_ContainerMetric:
-				m.ProcessContainerMetric(message.GetContainerMetric())
+				m.processContainerMetric(message.GetContainerMetric())
 			}
 		case err, ok := <-errs:
 			if !ok {
@@ -96,7 +96,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 	}
 }
 
-func (m *AppWatcher) ProcessContainerMetric(metric *sonde_events.ContainerMetric) {
+func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric) {
 	index := metric.GetInstanceIndex()
 	if int(index) < len(m.MetricsForInstance) {
 		instance := m.MetricsForInstance[index]

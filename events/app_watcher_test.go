@@ -54,6 +54,7 @@ var _ = Describe("AppWatcher", func() {
 	var (
 		appWatcher *events.AppWatcher
 		registerer *FakeRegistry
+		streamProvider *mocks.FakeAppStreamProvider
 	)
 
 	BeforeEach(func() {
@@ -62,7 +63,7 @@ var _ = Describe("AppWatcher", func() {
 		}
 
 		registerer = &FakeRegistry{}
-		streamProvider := &mocks.FakeAppStreamProvider{}
+		streamProvider = &mocks.FakeAppStreamProvider{}
 		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
 	})
 	AfterEach(func() {})
@@ -127,9 +128,7 @@ var _ = Describe("AppWatcher", func() {
 
 			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})
-	})
 
-	Describe("processContainerMetrics", func() {
 		It("sets a CPU metric on an instance", func() {
 			cpuPercentage := 10.0
 			var instanceIndex int32 = 0
@@ -137,10 +136,17 @@ var _ = Describe("AppWatcher", func() {
 				CpuPercentage: &cpuPercentage,
 				InstanceIndex: &instanceIndex,
 			}
-			appWatcher.ProcessContainerMetric(&containerMetric)
+			messages := make(chan *sonde_events.Envelope,1)
+			metricType := sonde_events.Envelope_ContainerMetric
+			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
+			streamProvider.OpenStreamForReturns(messages, nil)
+
+			go appWatcher.Run()
+			defer appWatcher.Close()
+			
 			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
 
-			Expect(testutil.ToFloat64(cpuGauge)).To(Equal(cpuPercentage))
+			Eventually(func() float64 {return testutil.ToFloat64(cpuGauge)}).Should(Equal(cpuPercentage))
 		})
 	})
 })
