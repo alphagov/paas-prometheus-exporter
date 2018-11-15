@@ -22,28 +22,45 @@ type CFClient interface {
 	ListAppsByQuery(url.Values) ([]cfclient.App, error)
 }
 
+//go:generate counterfeiter -o mocks/watcher_creator.go . watcherCreator
+type watcherCreator interface {
+	CreateWatcher(cfclient.App, prometheus.Registerer) *events.AppWatcher
+}
+
+type ConcreteWatcherCreator struct {
+	config *cfclient.Config
+}
+
+func (b *ConcreteWatcherCreator) CreateWatcher(app cfclient.App, registry prometheus.Registerer) *events.AppWatcher {
+	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
+		Config: b.config,
+	}
+	return events.NewAppWatcher(app, registry, provider)
+}
+
 type PaasExporter struct {
 	cf       CFClient
-	config   *cfclient.Config
 	watchers map[string]*events.AppWatcher
+	watcherCreator 	 watcherCreator
 }
 
 func New(cf CFClient, config *cfclient.Config) *PaasExporter {
 	return &PaasExporter{
 		cf: cf,
-		config: config,
 		watchers: make(map[string]*events.AppWatcher),
+		watcherCreator: &ConcreteWatcherCreator{
+			config: config,
+		},
 	}
 }
 
-func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
-		Config: e.config,
-	}
-	appWatcher := events.NewAppWatcher(app, prometheus.WrapRegistererWith(
-		prometheus.Labels{"guid": app.Guid, "app": app.Name},
-		prometheus.DefaultRegisterer,
-	), provider)
+func (e *PaasExporter) createNewWatcher(app cfclient.App) {	
+	appWatcher := e.watcherCreator.CreateWatcher(app, prometheus.WrapRegistererWith(
+			prometheus.Labels{"guid": app.Guid, "app": app.Name},
+			prometheus.DefaultRegisterer,
+		),
+	)
+
 	e.watchers[app.Guid] = appWatcher
 	go appWatcher.Run()
 }
