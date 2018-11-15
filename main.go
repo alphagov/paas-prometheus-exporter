@@ -56,7 +56,7 @@ func main() {
 	e := exporter.New(cf, &exporter.ConcreteWatcherCreator{
 		Config: config,
 	})
-	e.Start(time.Duration(*updateFrequency) * time.Second)
+	go e.Start(time.Duration(*updateFrequency) * time.Second)
 	http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *prometheusBindPort), nil))
 }

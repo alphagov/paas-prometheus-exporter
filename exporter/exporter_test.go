@@ -1,6 +1,8 @@
 package exporter_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -27,9 +29,9 @@ var _ = Describe("CheckForNewApps", func() {
 
 		e := exporter.New(fakeClient, fakeWatcherCreator)
 
-		e.CheckForNewApps()
+		go e.Start(100 * time.Millisecond)
 
-		Expect(fakeWatcherCreator.CreateWatcherCallCount()).To(Equal(1))
+		Eventually(fakeWatcherCreator.CreateWatcherCallCount).Should(Equal(1))
 	})
 
 	XIt("deletes an AppWatcher when an app is deleted", func() {

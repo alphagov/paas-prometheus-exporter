@@ -56,7 +56,7 @@ func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 	e.watchers[app.Guid] = appWatcher
 }
 
-func (e *PaasExporter) CheckForNewApps() error {
+func (e *PaasExporter) checkForNewApps() error {
 	apps, err := e.cf.ListAppsByQuery(url.Values{})
 	if err != nil {
 		return err
@@ -99,15 +99,13 @@ func (e *PaasExporter) WatcherCount() int {
 }
 
 func (e *PaasExporter) Start(updateFrequency time.Duration) {
-	go func() {
-		for {
-			log.Println("checking for new apps")
-			err := e.CheckForNewApps()
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			time.Sleep(updateFrequency)
+	for {
+		log.Println("checking for new apps")
+		err := e.checkForNewApps()
+		if err != nil {
+			log.Fatal(err)
 		}
-	}()
+
+		time.Sleep(updateFrequency)
+	}
 }
