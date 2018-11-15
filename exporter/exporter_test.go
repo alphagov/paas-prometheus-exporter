@@ -3,7 +3,6 @@ package exporter_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	//. "github.com/onsi/gomega/ghttp"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 
@@ -24,20 +23,22 @@ var _ = Describe("CheckForNewApps", func() {
 	It("creates a new app", func() {
 		fakeClient.ListAppsByQueryReturns([]cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
-		}, nil )
+		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherCreator)
 
 		e.CheckForNewApps()
 
-		Expect(e.WatcherCount()).To(Equal(1))
+		Expect(fakeWatcherCreator.CreateWatcherCallCount()).To(Equal(1))
 	})
 
+	XIt("deletes an AppWatcher when an app is deleted", func() {
+
+	})
+	XIt("deletes and recreates an AppWatcher when an app is renamed", func() {
+
+	})
+	XIt("updates an AppWatcher when an app changes size", func() {
+
+	})
 })
-
-// test we hope to write
-
-// when an app is created we create an app AppWatcher
-// when it's deleted we delete the appWatcher
-// when an app is renamed we delete the old watcher and create a new one
-// when an app is scaled we tell the app watcher

@@ -39,29 +39,26 @@ func (b *ConcreteWatcherCreator) CreateWatcher(app cfclient.App, registry promet
 }
 
 type PaasExporter struct {
-	cf       CFClient
-	watchers map[string]*events.AppWatcher
-	watcherCreator 	 watcherCreator
+	cf             CFClient
+	watchers       map[string]*events.AppWatcher
+	watcherCreator watcherCreator
 }
 
 func New(cf CFClient, wc watcherCreator) *PaasExporter {
 	return &PaasExporter{
-		cf: cf,
-		watchers: make(map[string]*events.AppWatcher),
+		cf:             cf,
+		watchers:       make(map[string]*events.AppWatcher),
 		watcherCreator: wc,
 	}
 }
 
-func (e *PaasExporter) createNewWatcher(app cfclient.App) {	
+func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 	appWatcher := e.watcherCreator.CreateWatcher(app, prometheus.WrapRegistererWith(
-			prometheus.Labels{"guid": app.Guid, "app": app.Name},
-			prometheus.DefaultRegisterer,
-		),
-	)
+		prometheus.Labels{"guid": app.Guid, "app": app.Name},
+		prometheus.DefaultRegisterer,
+	))
 
 	e.watchers[app.Guid] = appWatcher
-	// FIXME: what if the appWatcher errors? we currently ignore it
-	go appWatcher.Run()
 }
 
 func (e *PaasExporter) CheckForNewApps() error {

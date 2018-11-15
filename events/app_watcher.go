@@ -8,7 +8,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-
 type AppWatcher struct {
 	MetricsForInstance []InstanceMetrics
 	app                cfclient.App
@@ -50,6 +49,9 @@ func NewAppWatcher(
 		streamProvider:     streamProvider,
 	}
 	appWatcher.scaleTo(app.Instances)
+
+	// FIXME: what if the appWatcher errors? we currently ignore it
+	go appWatcher.Run()
 	return appWatcher
 }
 
