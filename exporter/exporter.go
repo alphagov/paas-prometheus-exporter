@@ -1,20 +1,15 @@
 package exporter
 
 import (
-	"fmt"
 	"log"
-	"net/http"
 	"net/url"
 
-	//"strings"
 	"time"
 
 	"github.com/alphagov/paas-prometheus-exporter/events"
 	"github.com/cloudfoundry-community/go-cfclient"
 
-	// sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:generate counterfeiter -o mocks/cfclient.go . CFClient
@@ -103,7 +98,7 @@ func (e *PaasExporter) WatcherCount() int {
 	return len(e.watchers)
 }
 
-func (e *PaasExporter) Start(updateFrequency time.Duration, prometheusBindPort int) {
+func (e *PaasExporter) Start(updateFrequency time.Duration) {
 	go func() {
 		for {
 			log.Println("checking for new apps")
@@ -115,7 +110,4 @@ func (e *PaasExporter) Start(updateFrequency time.Duration, prometheusBindPort i
 			time.Sleep(updateFrequency)
 		}
 	}()
-
-	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", prometheusBindPort), nil))
 }

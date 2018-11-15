@@ -1,13 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
-	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/alphagov/paas-prometheus-exporter/exporter"
+	"github.com/cloudfoundry-community/go-cfclient"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
-	// "os"
 )
 
 var (
@@ -54,5 +56,7 @@ func main() {
 	e := exporter.New(cf, &exporter.ConcreteWatcherCreator{
 		Config: config,
 	})
-	e.Start(time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
+	e.Start(time.Duration(*updateFrequency) * time.Second)
+	http.Handle("/metrics", promhttp.Handler())
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *prometheusBindPort), nil))
 }
