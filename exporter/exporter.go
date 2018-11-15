@@ -28,12 +28,12 @@ type watcherCreator interface {
 }
 
 type ConcreteWatcherCreator struct {
-	config *cfclient.Config
+	Config *cfclient.Config
 }
 
 func (b *ConcreteWatcherCreator) CreateWatcher(app cfclient.App, registry prometheus.Registerer) *events.AppWatcher {
 	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
-		Config: b.config,
+		Config: b.Config,
 	}
 	return events.NewAppWatcher(app, registry, provider)
 }
@@ -44,13 +44,11 @@ type PaasExporter struct {
 	watcherCreator 	 watcherCreator
 }
 
-func New(cf CFClient, config *cfclient.Config) *PaasExporter {
+func New(cf CFClient, wc watcherCreator) *PaasExporter {
 	return &PaasExporter{
 		cf: cf,
 		watchers: make(map[string]*events.AppWatcher),
-		watcherCreator: &ConcreteWatcherCreator{
-			config: config,
-		},
+		watcherCreator: wc,
 	}
 }
 
@@ -62,6 +60,7 @@ func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 	)
 
 	e.watchers[app.Guid] = appWatcher
+	// FIXME: what if the appWatcher errors? we currently ignore it
 	go appWatcher.Run()
 }
 

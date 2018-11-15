@@ -51,6 +51,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	e := exporter.New(cf, config)
+	e := exporter.New(cf, &exporter.ConcreteWatcherCreator{
+		Config: config,
+	})
 	e.Start(time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
 }

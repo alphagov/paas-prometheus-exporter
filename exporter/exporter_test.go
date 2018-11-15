@@ -14,9 +14,11 @@ import (
 var _ = Describe("CheckForNewApps", func() {
 
 	var fakeClient *mocks.FakeCFClient
+	var fakeWatcherCreator *mocks.FakeWatcherCreator
 
 	BeforeEach(func() {
 		fakeClient = &mocks.FakeCFClient{}
+		fakeWatcherCreator = &mocks.FakeWatcherCreator{}
 	})
 
 	It("creates a new app", func() {
@@ -24,9 +26,7 @@ var _ = Describe("CheckForNewApps", func() {
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}, nil )
 
-		config := &cfclient.Config{}
-
-		e := exporter.New(fakeClient, config)
+		e := exporter.New(fakeClient, fakeWatcherCreator)
 
 		e.CheckForNewApps()
 
