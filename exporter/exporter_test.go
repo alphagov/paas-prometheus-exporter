@@ -15,11 +15,11 @@ import (
 var _ = Describe("CheckForNewApps", func() {
 
 	var fakeClient *mocks.FakeCFClient
-	var fakeWatcherCreator *mocks.FakeWatcherCreator
+	var fakeWatcherManager *mocks.FakeWatcherManager
 
 	BeforeEach(func() {
 		fakeClient = &mocks.FakeCFClient{}
-		fakeWatcherCreator = &mocks.FakeWatcherCreator{}
+		fakeWatcherManager = &mocks.FakeWatcherManager{}
 	})
 
 	It("creates a new app", func() {
@@ -27,16 +27,27 @@ var _ = Describe("CheckForNewApps", func() {
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}, nil)
 
-		e := exporter.New(fakeClient, fakeWatcherCreator)
+		e := exporter.New(fakeClient, fakeWatcherManager)
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherCreator.CreateWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.CreateWatcherCallCount).Should(Equal(1))
 	})
 
-	XIt("deletes an AppWatcher when an app is deleted", func() {
+	FIt("deletes an AppWatcher when an app is deleted", func() {
+		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil)
+		fakeClient.ListAppsByQueryReturns([]cfclient.App{}, nil)
 
+		e := exporter.New(fakeClient, fakeWatcherManager)
+
+		go e.Start(100 * time.Millisecond)
+
+		Eventually(fakeWatcherManager.CreateWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 	})
+
 	XIt("deletes and recreates an AppWatcher when an app is renamed", func() {
 
 	})
