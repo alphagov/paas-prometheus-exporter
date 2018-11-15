@@ -9,11 +9,12 @@ import (
 )
 
 type AppWatcher struct {
-	MetricsForInstance []InstanceMetrics
-	app                cfclient.App
-	appUpdateChan      chan cfclient.App
-	registerer         prometheus.Registerer
-	streamProvider     AppStreamProvider
+	MetricsForInstance    []InstanceMetrics
+	appName               string
+	appGuid               string
+	numberOfInstancesChan chan int
+	registerer            prometheus.Registerer
+	streamProvider        AppStreamProvider
 }
 
 type InstanceMetrics struct {
@@ -42,11 +43,12 @@ func NewAppWatcher(
 	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
-		MetricsForInstance: make([]InstanceMetrics, 0),
-		app:                app,
-		registerer:         registerer,
-		appUpdateChan:      make(chan cfclient.App, 5),
-		streamProvider:     streamProvider,
+		MetricsForInstance:    make([]InstanceMetrics, 0),
+		appName:               app.Name,
+		appGuid:               app.Guid,
+		registerer:            registerer,
+		numberOfInstancesChan: make(chan int, 5),
+		streamProvider:        streamProvider,
 	}
 	appWatcher.scaleTo(app.Instances)
 
@@ -56,7 +58,7 @@ func NewAppWatcher(
 }
 
 func (m *AppWatcher) Run() error {
-	msgs, errs := m.streamProvider.OpenStreamFor(m.app.Guid)
+	msgs, errs := m.streamProvider.OpenStreamFor(m.appGuid)
 
 	return m.mainLoop(msgs, errs)
 }
@@ -84,16 +86,13 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 				continue
 			}
 			return err
-		case updatedApp, ok := <-m.appUpdateChan:
+		case newNumberOfInstances, ok := <-m.numberOfInstancesChan:
 			if !ok {
 				m.scaleTo(0)
 				return nil
 			}
 
-			if updatedApp.Instances != m.app.Instances {
-				m.scaleTo(updatedApp.Instances)
-			}
-			m.app = updatedApp
+			m.scaleTo(newNumberOfInstances)
 		}
 	}
 }
@@ -107,15 +106,15 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 }
 
 func (m *AppWatcher) AppName() string {
-	return m.app.Name
+	return m.appName
 }
 
-func (m *AppWatcher) UpdateApp(app cfclient.App) {
-	m.appUpdateChan <- app
+func (m *AppWatcher) UpdateAppInstances(newNumberOfInstances int) {
+	m.numberOfInstancesChan <- newNumberOfInstances
 }
 
 func (m *AppWatcher) Close() {
-	close(m.appUpdateChan)
+	close(m.numberOfInstancesChan)
 }
 
 func (m *AppWatcher) scaleTo(newInstanceCount int) {

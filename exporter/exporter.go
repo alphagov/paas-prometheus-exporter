@@ -82,7 +82,7 @@ func (e *PaasExporter) checkForNewApps() error {
 				e.createNewWatcher(app)
 			} else {
 				// notify watcher that instances may have changed
-				appWatcher.UpdateApp(app)
+				appWatcher.UpdateAppInstances(app.Instances)
 			}
 		} else {
 			// new app

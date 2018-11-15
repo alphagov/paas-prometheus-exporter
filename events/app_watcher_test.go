@@ -7,17 +7,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/alphagov/paas-prometheus-exporter/events"
+	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
 	"github.com/cloudfoundry-community/go-cfclient"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
-	"github.com/alphagov/paas-prometheus-exporter/events"
-	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
 )
 
 type FakeRegistry struct {
 	mustRegisterCount int
-	unregisterCount int
+	unregisterCount   int
 	sync.Mutex
 }
 
@@ -52,8 +52,8 @@ func (m *FakeRegistry) UnregisterCallCount() int {
 
 var _ = Describe("AppWatcher", func() {
 	var (
-		appWatcher *events.AppWatcher
-		registerer *FakeRegistry
+		appWatcher     *events.AppWatcher
+		registerer     *FakeRegistry
 		streamProvider *mocks.FakeAppStreamProvider
 	)
 
@@ -96,12 +96,7 @@ var _ = Describe("AppWatcher", func() {
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 
-			appWatcher.UpdateApp(cfclient.App{
-				Guid: "33333333-3333-3333-3333-333333333333",
-				Instances: 2,
-				Name: "foo",
-				SpaceURL: "/v2/spaces/123",
-			})
+			appWatcher.UpdateAppInstances(2)
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 		})
@@ -110,21 +105,11 @@ var _ = Describe("AppWatcher", func() {
 			go appWatcher.Run()
 			defer appWatcher.Close()
 
-			appWatcher.UpdateApp(cfclient.App{
-				Guid: "33333333-3333-3333-3333-333333333333",
-				Instances: 2,
-				Name: "foo",
-				SpaceURL: "/v2/spaces/123",
-			})
+			appWatcher.UpdateApp(2)
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 
-			appWatcher.UpdateApp(cfclient.App{
-				Guid: "33333333-3333-3333-3333-333333333333",
-				Instances: 1,
-				Name: "foo",
-				SpaceURL: "/v2/spaces/123",
-			})
+			appWatcher.UpdateApp(1)
 
 			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})
@@ -136,17 +121,17 @@ var _ = Describe("AppWatcher", func() {
 				CpuPercentage: &cpuPercentage,
 				InstanceIndex: &instanceIndex,
 			}
-			messages := make(chan *sonde_events.Envelope,1)
+			messages := make(chan *sonde_events.Envelope, 1)
 			metricType := sonde_events.Envelope_ContainerMetric
 			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
 			streamProvider.OpenStreamForReturns(messages, nil)
 
 			go appWatcher.Run()
 			defer appWatcher.Close()
-			
+
 			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
 
-			Eventually(func() float64 {return testutil.ToFloat64(cpuGauge)}).Should(Equal(cpuPercentage))
+			Eventually(func() float64 { return testutil.ToFloat64(cpuGauge) }).Should(Equal(cpuPercentage))
 		})
 	})
 })
