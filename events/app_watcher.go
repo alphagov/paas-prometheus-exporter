@@ -10,7 +10,7 @@ import (
 
 
 type AppWatcher struct {
-	metricsForInstance []InstanceMetrics
+	MetricsForInstance []InstanceMetrics
 	app                cfclient.App
 	appUpdateChan      chan cfclient.App
 	registerer         prometheus.Registerer
@@ -18,14 +18,14 @@ type AppWatcher struct {
 }
 
 type InstanceMetrics struct {
-	cpu prometheus.Gauge
+	Cpu prometheus.Gauge
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
 	im := InstanceMetrics{
-		cpu: prometheus.NewGauge(
+		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "cpu",
+				Name: "Cpu",
 				Help: " ",
 				ConstLabels: prometheus.Labels{
 					"instance": fmt.Sprintf("%d", instanceIndex),
@@ -33,23 +33,21 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 			},
 		),
 	}
-	registerer.MustRegister(im.cpu)
+	registerer.MustRegister(im.Cpu)
 	return im
 }
 
 func NewAppWatcher(
-	config *cfclient.Config,
 	app cfclient.App,
 	registerer prometheus.Registerer,
+	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
-		metricsForInstance: make([]InstanceMetrics, 0),
+		MetricsForInstance: make([]InstanceMetrics, 0),
 		app:                app,
 		registerer:         registerer,
 		appUpdateChan:      make(chan cfclient.App, 5),
-		streamProvider:     &DopplerAppStreamProvider{
-			config: config,        			
-		},
+		streamProvider:     streamProvider,
 	}
 	appWatcher.scaleTo(app.Instances)
 	return appWatcher
@@ -73,7 +71,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 			}
 			switch message.GetEventType() {
 			case sonde_events.Envelope_ContainerMetric:
-				m.processContainerMetric(message.GetContainerMetric())
+				m.ProcessContainerMetric(message.GetContainerMetric())
 			}
 		case err, ok := <-errs:
 			if !ok {
@@ -98,11 +96,11 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 	}
 }
 
-func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric) {
+func (m *AppWatcher) ProcessContainerMetric(metric *sonde_events.ContainerMetric) {
 	index := metric.GetInstanceIndex()
-	if int(index) < len(m.metricsForInstance) {
-		instance := m.metricsForInstance[index]
-		instance.cpu.Set(metric.GetCpuPercentage())
+	if int(index) < len(m.MetricsForInstance) {
+		instance := m.MetricsForInstance[index]
+		instance.Cpu.Set(metric.GetCpuPercentage())
 	}
 }
 
@@ -119,20 +117,20 @@ func (m *AppWatcher) Close() {
 }
 
 func (m *AppWatcher) scaleTo(newInstanceCount int) {
-	currentInstanceCount := len(m.metricsForInstance)
+	currentInstanceCount := len(m.MetricsForInstance)
 
 	if currentInstanceCount < newInstanceCount {
 		for i := currentInstanceCount; i < newInstanceCount; i++ {
-			m.metricsForInstance = append(m.metricsForInstance, NewInstanceMetrics(i, m.registerer))
+			m.MetricsForInstance = append(m.MetricsForInstance, NewInstanceMetrics(i, m.registerer))
 		}
 	} else {
 		for i := currentInstanceCount; i > newInstanceCount; i-- {
 			m.unregisterInstanceMetrics(i - 1)
 		}
-		m.metricsForInstance = m.metricsForInstance[0:newInstanceCount]
+		m.MetricsForInstance = m.MetricsForInstance[0:newInstanceCount]
 	}
 }
 
 func (m *AppWatcher) unregisterInstanceMetrics(instanceIndex int) {
-	m.registerer.Unregister(m.metricsForInstance[instanceIndex].cpu)
+	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].Cpu)
 }

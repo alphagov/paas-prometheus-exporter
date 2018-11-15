@@ -8,12 +8,13 @@ import (
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 )
 
+//go:generate counterfeiter -o mocks/stream_provider.go . AppStreamProvider
 type AppStreamProvider interface {
 	OpenStreamFor(appGuid string) (<-chan *sonde_events.Envelope, <-chan error)
 }
 
 type DopplerAppStreamProvider struct {
-	config             *cfclient.Config
+	Config             *cfclient.Config
 	cfClient           *cfclient.Client
 }
 
@@ -57,7 +58,7 @@ func (m *DopplerAppStreamProvider) RefreshAuthToken() (token string, authError e
 }
 
 func (m *DopplerAppStreamProvider) authenticate() (err error) {
-	client, err := cfclient.NewClient(m.config)
+	client, err := cfclient.NewClient(m.Config)
 	if err != nil {
 		return err
 	}

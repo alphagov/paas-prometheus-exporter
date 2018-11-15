@@ -1,4 +1,4 @@
-package events
+package events_test
 
 import (
 	"errors"
@@ -11,6 +11,8 @@ import (
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/alphagov/paas-prometheus-exporter/events"
+	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
 )
 
 type FakeRegistry struct {
@@ -50,28 +52,18 @@ func (m *FakeRegistry) UnregisterCallCount() int {
 
 var _ = Describe("AppWatcher", func() {
 	var (
-		appWatcher *AppWatcher
-		// Apps        []cfclient.App
+		appWatcher *events.AppWatcher
 		registerer *FakeRegistry
 	)
 
 	BeforeEach(func() {
-
-		config := &cfclient.Config{
-			ApiAddress:        "some/endpoint",
-			SkipSslValidation: true,
-			Username:          "barry",
-			Password:          "password",
-			ClientID:          "dummy_client_id",
-			ClientSecret:      "dummy_client_secret",
-		}
-
 		apps := []cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}
 
 		registerer = &FakeRegistry{}
-		appWatcher = NewAppWatcher(config, apps[0], registerer)
+		streamProvider := &mocks.FakeAppStreamProvider{}
+		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
 	})
 	AfterEach(func() {})
 
@@ -81,16 +73,16 @@ var _ = Describe("AppWatcher", func() {
 		})
 	})
 
-	Describe("mainLoop", func() {
+	Describe("Run", func() {
 		It("Registers metrics on startup", func() {
-			// go appWatcher.mainLoop(nil, nil)
+			// go appWatcher.Run()
 			// defer appWatcher.Close()
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 		})
 
 		It("Unregisters metrics on close", func() {
-			go appWatcher.mainLoop(nil, nil)
+			go appWatcher.Run()
 
 			appWatcher.Close()
 
@@ -98,7 +90,7 @@ var _ = Describe("AppWatcher", func() {
 		})
 
 		It("Registers more metrics when new instances are created", func() {
-			go appWatcher.mainLoop(nil, nil)
+			go appWatcher.Run()
 			defer appWatcher.Close()
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
@@ -114,7 +106,7 @@ var _ = Describe("AppWatcher", func() {
 		})
 
 		It("Unregisters some metrics when old instances are deleted", func() {
-			go appWatcher.mainLoop(nil, nil)
+			go appWatcher.Run()
 			defer appWatcher.Close()
 
 			appWatcher.UpdateApp(cfclient.App{
@@ -145,8 +137,8 @@ var _ = Describe("AppWatcher", func() {
 				CpuPercentage: &cpuPercentage,
 				InstanceIndex: &instanceIndex,
 			}
-			appWatcher.processContainerMetric(&containerMetric)
-			cpuGauge := appWatcher.metricsForInstance[instanceIndex].cpu
+			appWatcher.ProcessContainerMetric(&containerMetric)
+			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
 
 			Expect(testutil.ToFloat64(cpuGauge)).To(Equal(cpuPercentage))
 		})

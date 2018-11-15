@@ -37,10 +37,13 @@ func New(cf CFClient, config *cfclient.Config) *PaasExporter {
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	appWatcher := events.NewAppWatcher(e.config, app, prometheus.WrapRegistererWith(
+	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
+		Config: e.config,
+	}
+	appWatcher := events.NewAppWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{"guid": app.Guid, "app": app.Name},
 		prometheus.DefaultRegisterer,
-	))
+	), provider)
 	e.watchers[app.Guid] = appWatcher
 	go appWatcher.Run()
 }
