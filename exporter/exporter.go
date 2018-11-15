@@ -24,14 +24,17 @@ type WatcherManager interface {
 }
 
 type ConcreteWatcherManager struct {
-	Config *cfclient.Config
+	config   *cfclient.Config
+	watchers map[string]*events.AppWatcher
 }
 
 func (wm *ConcreteWatcherManager) CreateWatcher(app cfclient.App, registry prometheus.Registerer) *events.AppWatcher {
 	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
-		Config: wm.Config,
+		Config: wm.config,
 	}
-	return events.NewAppWatcher(app, registry, provider)
+	appWatcher := events.NewAppWatcher(app, registry, provider)
+	wm.watchers[app.Guid] = appWatcher
+	return appWatcher
 }
 
 func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
@@ -40,25 +43,21 @@ func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
 
 type PaasExporter struct {
 	cf             CFClient
-	watchers       map[string]*events.AppWatcher
 	watcherManager WatcherManager
 }
 
 func New(cf CFClient, wc WatcherManager) *PaasExporter {
 	return &PaasExporter{
 		cf:             cf,
-		watchers:       make(map[string]*events.AppWatcher),
 		watcherManager: wc,
 	}
 }
 
-func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	appWatcher := e.watcherManager.CreateWatcher(app, prometheus.WrapRegistererWith(
-		prometheus.Labels{"guid": app.Guid, "app": app.Name},
-		prometheus.DefaultRegisterer,
-	))
-
-	e.watchers[app.Guid] = appWatcher
+func NewWatcherManager(config *cfclient.Config) WatcherManager {
+	return &ConcreteWatcherManager{
+		config:   config,
+		watchers: make(map[string]*events.AppWatcher),
+	}
 }
 
 func (e *PaasExporter) checkForNewApps() error {
@@ -74,19 +73,24 @@ func (e *PaasExporter) checkForNewApps() error {
 		// need to check app.State is "STARTED"
 		running[app.Guid] = true
 
-		appWatcher, present := e.watchers[app.Guid]
-		if present {
-			if appWatcher.AppName() != app.Name {
-				// Name changed, stop and restart
-				appWatcher.Close()
-				e.createNewWatcher(app)
-			} else {
-				// notify watcher that instances may have changed
-				appWatcher.UpdateAppInstances(app.Instances)
-			}
+		if e.watcherManager.appIsBeingWatched(app.Guid) {
+			// if appWatcher.AppName() != app.Name {
+			// 	// Name changed, stop and restart
+			// 	appWatcher.Close()
+			// 	e.watcherManager.CreateWatcher(app, prometheus.WrapRegistererWith(
+			// 		prometheus.Labels{"guid": app.Guid, "app": app.Name},
+			// 		prometheus.DefaultRegisterer,
+			// 	))
+			// } else {
+			// notify watcher that instances may have changed
+			e.watcherManager.UpdateAppInstances(app.Guid, app.Instances)
+			// }
 		} else {
 			// new app
-			e.createNewWatcher(app)
+			e.watcherManager.CreateWatcher(app, prometheus.WrapRegistererWith(
+				prometheus.Labels{"guid": app.Guid, "app": app.Name},
+				prometheus.DefaultRegisterer,
+			))
 		}
 	}
 
