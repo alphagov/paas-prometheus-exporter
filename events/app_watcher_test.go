@@ -83,8 +83,8 @@ var _ = Describe("AppWatcher", func() {
 
 	Describe("mainLoop", func() {
 		It("Registers metrics on startup", func() {
-			go appWatcher.mainLoop(nil, nil)
-			defer appWatcher.Close()
+			// go appWatcher.mainLoop(nil, nil)
+			// defer appWatcher.Close()
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 		})

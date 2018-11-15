@@ -1,22 +1,20 @@
 package events
 
 import (
-	"crypto/tls"
 	"fmt"
 
 	"github.com/cloudfoundry-community/go-cfclient"
-	"github.com/cloudfoundry/noaa/consumer"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+
 type AppWatcher struct {
-	config             *cfclient.Config
-	cfClient           *cfclient.Client
 	metricsForInstance []InstanceMetrics
 	app                cfclient.App
 	appUpdateChan      chan cfclient.App
 	registerer         prometheus.Registerer
+	streamProvider     AppStreamProvider
 }
 
 type InstanceMetrics struct {
@@ -46,57 +44,19 @@ func NewAppWatcher(
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
 		metricsForInstance: make([]InstanceMetrics, 0),
-		config:             config,
 		app:                app,
 		registerer:         registerer,
 		appUpdateChan:      make(chan cfclient.App, 5),
+		streamProvider:     &DopplerAppStreamProvider{
+			config: config,        			
+		},
 	}
 	appWatcher.scaleTo(app.Instances)
 	return appWatcher
 }
 
-// RefreshAuthToken satisfies the `consumer.TokenRefresher` interface.
-func (m *AppWatcher) RefreshAuthToken() (token string, authError error) {
-	token, err := m.cfClient.GetToken()
-	if err != nil {
-		err := m.authenticate()
-
-		if err != nil {
-			return "", err
-		}
-
-		return m.cfClient.GetToken()
-	}
-
-	return token, nil
-}
-
-func (m *AppWatcher) authenticate() (err error) {
-	client, err := cfclient.NewClient(m.config)
-	if err != nil {
-		return err
-	}
-
-	m.cfClient = client
-	return nil
-}
-
 func (m *AppWatcher) Run() error {
-	err := m.authenticate()
-	if err != nil {
-		return err
-	}
-	tlsConfig := tls.Config{InsecureSkipVerify: false} // TODO: is this needed?
-	conn := consumer.New(m.cfClient.Endpoint.DopplerEndpoint, &tlsConfig, nil)
-	conn.RefreshTokenFrom(m)
-	defer conn.Close()
-
-	authToken, err := m.cfClient.GetToken()
-	if err != nil {
-		return err
-	}
-
-	msgs, errs := conn.Stream(m.app.Guid, authToken)
+	msgs, errs := m.streamProvider.OpenStreamFor(m.app.Guid)
 
 	return m.mainLoop(msgs, errs)
 }
