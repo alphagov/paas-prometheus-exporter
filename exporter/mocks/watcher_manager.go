@@ -21,17 +21,6 @@ type FakeWatcherManager struct {
 	deleteWatcherArgsForCall []struct {
 		arg1 string
 	}
-	IsWatchedStub        func(string) bool
-	isWatchedMutex       sync.RWMutex
-	isWatchedArgsForCall []struct {
-		arg1 string
-	}
-	isWatchedReturns struct {
-		result1 bool
-	}
-	isWatchedReturnsOnCall map[int]struct {
-		result1 bool
-	}
 	UpdateAppInstancesStub        func(string, int)
 	updateAppInstancesMutex       sync.RWMutex
 	updateAppInstancesArgsForCall []struct {
@@ -105,66 +94,6 @@ func (fake *FakeWatcherManager) DeleteWatcherArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeWatcherManager) IsWatched(arg1 string) bool {
-	fake.isWatchedMutex.Lock()
-	ret, specificReturn := fake.isWatchedReturnsOnCall[len(fake.isWatchedArgsForCall)]
-	fake.isWatchedArgsForCall = append(fake.isWatchedArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("IsWatched", []interface{}{arg1})
-	fake.isWatchedMutex.Unlock()
-	if fake.IsWatchedStub != nil {
-		return fake.IsWatchedStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.isWatchedReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeWatcherManager) IsWatchedCallCount() int {
-	fake.isWatchedMutex.RLock()
-	defer fake.isWatchedMutex.RUnlock()
-	return len(fake.isWatchedArgsForCall)
-}
-
-func (fake *FakeWatcherManager) IsWatchedCalls(stub func(string) bool) {
-	fake.isWatchedMutex.Lock()
-	defer fake.isWatchedMutex.Unlock()
-	fake.IsWatchedStub = stub
-}
-
-func (fake *FakeWatcherManager) IsWatchedArgsForCall(i int) string {
-	fake.isWatchedMutex.RLock()
-	defer fake.isWatchedMutex.RUnlock()
-	argsForCall := fake.isWatchedArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeWatcherManager) IsWatchedReturns(result1 bool) {
-	fake.isWatchedMutex.Lock()
-	defer fake.isWatchedMutex.Unlock()
-	fake.IsWatchedStub = nil
-	fake.isWatchedReturns = struct {
-		result1 bool
-	}{result1}
-}
-
-func (fake *FakeWatcherManager) IsWatchedReturnsOnCall(i int, result1 bool) {
-	fake.isWatchedMutex.Lock()
-	defer fake.isWatchedMutex.Unlock()
-	fake.IsWatchedStub = nil
-	if fake.isWatchedReturnsOnCall == nil {
-		fake.isWatchedReturnsOnCall = make(map[int]struct {
-			result1 bool
-		})
-	}
-	fake.isWatchedReturnsOnCall[i] = struct {
-		result1 bool
-	}{result1}
-}
-
 func (fake *FakeWatcherManager) UpdateAppInstances(arg1 string, arg2 int) {
 	fake.updateAppInstancesMutex.Lock()
 	fake.updateAppInstancesArgsForCall = append(fake.updateAppInstancesArgsForCall, struct {
@@ -204,8 +133,6 @@ func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {
 	defer fake.addWatcherMutex.RUnlock()
 	fake.deleteWatcherMutex.RLock()
 	defer fake.deleteWatcherMutex.RUnlock()
-	fake.isWatchedMutex.RLock()
-	defer fake.isWatchedMutex.RUnlock()
 	fake.updateAppInstancesMutex.RLock()
 	defer fake.updateAppInstancesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

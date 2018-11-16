@@ -21,7 +21,6 @@ type CFClient interface {
 type WatcherManager interface {
 	AddWatcher(cfclient.App, prometheus.Registerer)
 	DeleteWatcher(appGuid string)
-	IsWatched(appGuid string) bool
 	UpdateAppInstances(appGuid string, instances int)
 }
 
@@ -47,11 +46,6 @@ func (wm *ConcreteWatcherManager) AddWatcher(app cfclient.App, registry promethe
 func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
 	wm.watchers[appGuid].Close()
 	delete(wm.watchers, appGuid)
-}
-
-func (wm *ConcreteWatcherManager) IsWatched(appGuid string) bool {
-	_, ok := wm.watchers[appGuid]
-	return ok
 }
 
 func (wm *ConcreteWatcherManager) UpdateAppInstances(appGuid string, instances int) {
@@ -93,7 +87,7 @@ func (e *PaasExporter) checkForNewApps() error {
 		// need to check app.State is "STARTED"
 		running[app.Guid] = true
 
-		if e.watcherManager.IsWatched(app.Guid) {
+		if _, ok := e.nameByGuid[app.Guid]; ok {
 			if e.nameByGuid[app.Guid] != app.Name {
 				// Name changed, stop and restart
 				e.watcherManager.DeleteWatcher(app.Guid)

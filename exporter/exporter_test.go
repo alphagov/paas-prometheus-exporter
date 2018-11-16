@@ -48,8 +48,20 @@ var _ = Describe("CheckForNewApps", func() {
 		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 	})
 
-	XIt("deletes and recreates an AppWatcher when an app is renamed", func() {
+	It("deletes and recreates an AppWatcher when an app is renamed", func() {
+		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil)
+		fakeClient.ListAppsByQueryReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "bar", SpaceURL: "/v2/spaces/123"},
+		}, nil)
 
+		e := exporter.New(fakeClient, fakeWatcherManager)
+
+		go e.Start(100 * time.Millisecond)
+
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(2))
+		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 	})
 	XIt("updates an AppWatcher when an app changes size", func() {
 
