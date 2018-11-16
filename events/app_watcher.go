@@ -23,7 +23,7 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 	im := InstanceMetrics{
 		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "Cpu",
+				Name: "cpu",
 				Help: " ",
 				ConstLabels: prometheus.Labels{
 					"instance": fmt.Sprintf("%d", instanceIndex),
