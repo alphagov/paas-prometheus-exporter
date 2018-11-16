@@ -24,7 +24,7 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "cpu",
-				Help: " ",
+				Help: "CPU utilisation in percent (0-100)",
 				ConstLabels: prometheus.Labels{
 					"instance": fmt.Sprintf("%d", instanceIndex),
 				},
