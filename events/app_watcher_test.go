@@ -105,11 +105,11 @@ var _ = Describe("AppWatcher", func() {
 			go appWatcher.Run()
 			defer appWatcher.Close()
 
-			appWatcher.UpdateApp(2)
+			appWatcher.UpdateAppInstances(2)
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 
-			appWatcher.UpdateApp(1)
+			appWatcher.UpdateAppInstances(1)
 
 			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})

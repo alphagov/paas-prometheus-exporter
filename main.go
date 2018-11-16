@@ -53,7 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	e := exporter.New(cf, &exporter.ConcreteWatcherCreator{
+	e := exporter.New(cf, &exporter.ConcreteWatcherManager{
 		Config: config,
 	})
 	go e.Start(time.Duration(*updateFrequency) * time.Second)
