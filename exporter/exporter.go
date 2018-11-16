@@ -22,7 +22,6 @@ type WatcherManager interface {
 	AddWatcher(cfclient.App, prometheus.Registerer)
 	DeleteWatcher(appGuid string)
 	IsWatched(appGuid string) bool
-	NameFor(appGuid string) string
 	UpdateAppInstances(appGuid string, instances int)
 	TrackedGuids() []string
 }
@@ -56,10 +55,6 @@ func (wm *ConcreteWatcherManager) IsWatched(appGuid string) bool {
 	return ok
 }
 
-func (wm *ConcreteWatcherManager) NameFor(appGuid string) string {
-	return wm.watchers[appGuid].AppName()
-}
-
 func (wm *ConcreteWatcherManager) UpdateAppInstances(appGuid string, instances int) {
 	wm.watchers[appGuid].UpdateAppInstances(instances)
 }
@@ -75,6 +70,7 @@ func (wm *ConcreteWatcherManager) TrackedGuids() []string {
 type PaasExporter struct {
 	cf             CFClient
 	watcherManager WatcherManager
+	nameByGuid     map[string]string
 }
 
 func New(cf CFClient, wc WatcherManager) *PaasExporter {
@@ -85,6 +81,7 @@ func New(cf CFClient, wc WatcherManager) *PaasExporter {
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
+	e.nameByGuid[app.Guid] = app.Name
 	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{"guid": app.Guid, "app": app.Name},
 		prometheus.DefaultRegisterer,
@@ -105,7 +102,7 @@ func (e *PaasExporter) checkForNewApps() error {
 		running[app.Guid] = true
 
 		if e.watcherManager.IsWatched(app.Guid) {
-			if e.watcherManager.NameFor(app.Guid) != app.Name {
+			if e.nameByGuid[app.Guid] != app.Name {
 				// Name changed, stop and restart
 				e.watcherManager.DeleteWatcher(app.Guid)
 				e.createNewWatcher(app)

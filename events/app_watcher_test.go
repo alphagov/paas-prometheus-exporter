@@ -68,12 +68,6 @@ var _ = Describe("AppWatcher", func() {
 	})
 	AfterEach(func() {})
 
-	Describe("AppName", func() {
-		It("knows the name of its application", func() {
-			Expect(appWatcher.AppName()).To(Equal("foo"))
-		})
-	})
-
 	Describe("Run", func() {
 		It("Registers metrics on startup", func() {
 			// go appWatcher.Run()

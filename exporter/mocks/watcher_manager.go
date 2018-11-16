@@ -32,17 +32,6 @@ type FakeWatcherManager struct {
 	isWatchedReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	NameForStub        func(string) string
-	nameForMutex       sync.RWMutex
-	nameForArgsForCall []struct {
-		arg1 string
-	}
-	nameForReturns struct {
-		result1 string
-	}
-	nameForReturnsOnCall map[int]struct {
-		result1 string
-	}
 	TrackedGuidsStub        func() []string
 	trackedGuidsMutex       sync.RWMutex
 	trackedGuidsArgsForCall []struct {
@@ -186,66 +175,6 @@ func (fake *FakeWatcherManager) IsWatchedReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
-func (fake *FakeWatcherManager) NameFor(arg1 string) string {
-	fake.nameForMutex.Lock()
-	ret, specificReturn := fake.nameForReturnsOnCall[len(fake.nameForArgsForCall)]
-	fake.nameForArgsForCall = append(fake.nameForArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("NameFor", []interface{}{arg1})
-	fake.nameForMutex.Unlock()
-	if fake.NameForStub != nil {
-		return fake.NameForStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.nameForReturns
-	return fakeReturns.result1
-}
-
-func (fake *FakeWatcherManager) NameForCallCount() int {
-	fake.nameForMutex.RLock()
-	defer fake.nameForMutex.RUnlock()
-	return len(fake.nameForArgsForCall)
-}
-
-func (fake *FakeWatcherManager) NameForCalls(stub func(string) string) {
-	fake.nameForMutex.Lock()
-	defer fake.nameForMutex.Unlock()
-	fake.NameForStub = stub
-}
-
-func (fake *FakeWatcherManager) NameForArgsForCall(i int) string {
-	fake.nameForMutex.RLock()
-	defer fake.nameForMutex.RUnlock()
-	argsForCall := fake.nameForArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeWatcherManager) NameForReturns(result1 string) {
-	fake.nameForMutex.Lock()
-	defer fake.nameForMutex.Unlock()
-	fake.NameForStub = nil
-	fake.nameForReturns = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *FakeWatcherManager) NameForReturnsOnCall(i int, result1 string) {
-	fake.nameForMutex.Lock()
-	defer fake.nameForMutex.Unlock()
-	fake.NameForStub = nil
-	if fake.nameForReturnsOnCall == nil {
-		fake.nameForReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.nameForReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
 func (fake *FakeWatcherManager) TrackedGuids() []string {
 	fake.trackedGuidsMutex.Lock()
 	ret, specificReturn := fake.trackedGuidsReturnsOnCall[len(fake.trackedGuidsArgsForCall)]
@@ -339,8 +268,6 @@ func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {
 	defer fake.deleteWatcherMutex.RUnlock()
 	fake.isWatchedMutex.RLock()
 	defer fake.isWatchedMutex.RUnlock()
-	fake.nameForMutex.RLock()
-	defer fake.nameForMutex.RUnlock()
 	fake.trackedGuidsMutex.RLock()
 	defer fake.trackedGuidsMutex.RUnlock()
 	fake.updateAppInstancesMutex.RLock()

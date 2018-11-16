@@ -10,7 +10,6 @@ import (
 
 type AppWatcher struct {
 	MetricsForInstance    []InstanceMetrics
-	appName               string
 	appGuid               string
 	numberOfInstancesChan chan int
 	registerer            prometheus.Registerer
@@ -44,7 +43,6 @@ func NewAppWatcher(
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
 		MetricsForInstance:    make([]InstanceMetrics, 0),
-		appName:               app.Name,
 		appGuid:               app.Guid,
 		registerer:            registerer,
 		numberOfInstancesChan: make(chan int, 5),
@@ -105,10 +103,6 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 		instance := m.MetricsForInstance[index]
 		instance.Cpu.Set(metric.GetCpuPercentage())
 	}
-}
-
-func (m *AppWatcher) AppName() string {
-	return m.appName
 }
 
 func (m *AppWatcher) UpdateAppInstances(newNumberOfInstances int) {
