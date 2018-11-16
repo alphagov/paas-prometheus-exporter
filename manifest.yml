@@ -7,5 +7,3 @@ applications:
     - go_buildpack
   env:
     GOPACKAGENAME: github.com/alphagov/paas-prometheus-exporter
-  health-check-type: none
-  no-route: true
