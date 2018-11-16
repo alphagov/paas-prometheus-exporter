@@ -19,46 +19,69 @@ type CFClient interface {
 
 //go:generate counterfeiter -o mocks/watcher_manager.go . WatcherManager
 type WatcherManager interface {
-	CreateWatcher(cfclient.App, prometheus.Registerer) *events.AppWatcher
+	AddWatcher(cfclient.App, prometheus.Registerer)
 	DeleteWatcher(appGuid string)
+	IsWatched(appGuid string) bool
+	NameFor(appGuid string) string
+	UpdateAppInstances(appGuid string, instances int)
+	TrackedGuids() []string
 }
 
 type ConcreteWatcherManager struct {
-	Config *cfclient.Config
+	config         *cfclient.Config
+	watchers       map[string]*events.AppWatcher
 }
 
-func (wm *ConcreteWatcherManager) CreateWatcher(app cfclient.App, registry prometheus.Registerer) *events.AppWatcher {
-	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
-		Config: wm.Config,
+func NewWatcherManager(config *cfclient.Config) WatcherManager {
+	return &ConcreteWatcherManager{
+		config:   config,
+		watchers: make(map[string]*events.AppWatcher),
 	}
-	return events.NewAppWatcher(app, registry, provider)
+}
+
+func (wm *ConcreteWatcherManager) AddWatcher(app cfclient.App, registry prometheus.Registerer) {
+	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
+		Config: wm.config,
+	}
+	wm.watchers[app.Guid] =	events.NewAppWatcher(app, registry, provider)
 }
 
 func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
 
 }
 
+func (wm *ConcreteWatcherManager) IsWatched(appGuid string) bool {
+	return false
+}
+
+func (wm *ConcreteWatcherManager) NameFor(appGuid string) string {
+	return " "
+}
+
+func (wm *ConcreteWatcherManager) UpdateAppInstances(appGuid string, instances int) {
+}
+
+func (wm *ConcreteWatcherManager) TrackedGuids() []string {
+	return []string{}
+}
+
 type PaasExporter struct {
 	cf             CFClient
-	watchers       map[string]*events.AppWatcher
 	watcherManager WatcherManager
 }
 
 func New(cf CFClient, wc WatcherManager) *PaasExporter {
 	return &PaasExporter{
 		cf:             cf,
-		watchers:       make(map[string]*events.AppWatcher),
 		watcherManager: wc,
 	}
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	appWatcher := e.watcherManager.CreateWatcher(app, prometheus.WrapRegistererWith(
+	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{"guid": app.Guid, "app": app.Name},
 		prometheus.DefaultRegisterer,
 	))
-
-	e.watchers[app.Guid] = appWatcher
 }
 
 func (e *PaasExporter) checkForNewApps() error {
@@ -74,15 +97,14 @@ func (e *PaasExporter) checkForNewApps() error {
 		// need to check app.State is "STARTED"
 		running[app.Guid] = true
 
-		appWatcher, present := e.watchers[app.Guid]
-		if present {
-			if appWatcher.AppName() != app.Name {
+		if e.watcherManager.IsWatched(app.Guid) {
+			if e.watcherManager.NameFor(app.Guid) != app.Name {
 				// Name changed, stop and restart
-				appWatcher.Close()
+				e.watcherManager.DeleteWatcher(app.Guid)
 				e.createNewWatcher(app)
 			} else {
 				// notify watcher that instances may have changed
-				appWatcher.UpdateAppInstances(app.Instances)
+				e.watcherManager.UpdateAppInstances(app.Guid, app.Instances)
 			}
 		} else {
 			// new app
@@ -90,17 +112,16 @@ func (e *PaasExporter) checkForNewApps() error {
 		}
 	}
 
-	for appGuid, appWatcher := range e.watchers {
+	for _, appGuid := range e.watcherManager.TrackedGuids() {
 		if ok := running[appGuid]; !ok {
-			appWatcher.Close()
-			delete(e.watchers, appGuid)
+			e.watcherManager.DeleteWatcher(appGuid)
 		}
 	}
 	return nil
 }
 
 func (e *PaasExporter) WatcherCount() int {
-	return len(e.watchers)
+	return 42
 }
 
 func (e *PaasExporter) Start(updateFrequency time.Duration) {

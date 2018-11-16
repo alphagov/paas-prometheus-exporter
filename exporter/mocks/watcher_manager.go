@@ -4,93 +4,95 @@ package mocks
 import (
 	sync "sync"
 
-	events "github.com/alphagov/paas-prometheus-exporter/events"
 	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
 	prometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 type FakeWatcherManager struct {
-	CreateWatcherStub        func(cfclient.App, prometheus.Registerer) *events.AppWatcher
-	createWatcherMutex       sync.RWMutex
-	createWatcherArgsForCall []struct {
+	AddWatcherStub        func(cfclient.App, prometheus.Registerer)
+	addWatcherMutex       sync.RWMutex
+	addWatcherArgsForCall []struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
-	}
-	createWatcherReturns struct {
-		result1 *events.AppWatcher
-	}
-	createWatcherReturnsOnCall map[int]struct {
-		result1 *events.AppWatcher
 	}
 	DeleteWatcherStub        func(string)
 	deleteWatcherMutex       sync.RWMutex
 	deleteWatcherArgsForCall []struct {
 		arg1 string
 	}
+	IsWatchedStub        func(string) bool
+	isWatchedMutex       sync.RWMutex
+	isWatchedArgsForCall []struct {
+		arg1 string
+	}
+	isWatchedReturns struct {
+		result1 bool
+	}
+	isWatchedReturnsOnCall map[int]struct {
+		result1 bool
+	}
+	NameForStub        func(string) string
+	nameForMutex       sync.RWMutex
+	nameForArgsForCall []struct {
+		arg1 string
+	}
+	nameForReturns struct {
+		result1 string
+	}
+	nameForReturnsOnCall map[int]struct {
+		result1 string
+	}
+	TrackedGuidsStub        func() []string
+	trackedGuidsMutex       sync.RWMutex
+	trackedGuidsArgsForCall []struct {
+	}
+	trackedGuidsReturns struct {
+		result1 []string
+	}
+	trackedGuidsReturnsOnCall map[int]struct {
+		result1 []string
+	}
+	UpdateAppInstancesStub        func(string, int)
+	updateAppInstancesMutex       sync.RWMutex
+	updateAppInstancesArgsForCall []struct {
+		arg1 string
+		arg2 int
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWatcherManager) CreateWatcher(arg1 cfclient.App, arg2 prometheus.Registerer) *events.AppWatcher {
-	fake.createWatcherMutex.Lock()
-	ret, specificReturn := fake.createWatcherReturnsOnCall[len(fake.createWatcherArgsForCall)]
-	fake.createWatcherArgsForCall = append(fake.createWatcherArgsForCall, struct {
+func (fake *FakeWatcherManager) AddWatcher(arg1 cfclient.App, arg2 prometheus.Registerer) {
+	fake.addWatcherMutex.Lock()
+	fake.addWatcherArgsForCall = append(fake.addWatcherArgsForCall, struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
 	}{arg1, arg2})
-	fake.recordInvocation("CreateWatcher", []interface{}{arg1, arg2})
-	fake.createWatcherMutex.Unlock()
-	if fake.CreateWatcherStub != nil {
-		return fake.CreateWatcherStub(arg1, arg2)
+	fake.recordInvocation("AddWatcher", []interface{}{arg1, arg2})
+	fake.addWatcherMutex.Unlock()
+	if fake.AddWatcherStub != nil {
+		fake.AddWatcherStub(arg1, arg2)
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.createWatcherReturns
-	return fakeReturns.result1
 }
 
-func (fake *FakeWatcherManager) CreateWatcherCallCount() int {
-	fake.createWatcherMutex.RLock()
-	defer fake.createWatcherMutex.RUnlock()
-	return len(fake.createWatcherArgsForCall)
+func (fake *FakeWatcherManager) AddWatcherCallCount() int {
+	fake.addWatcherMutex.RLock()
+	defer fake.addWatcherMutex.RUnlock()
+	return len(fake.addWatcherArgsForCall)
 }
 
-func (fake *FakeWatcherManager) CreateWatcherCalls(stub func(cfclient.App, prometheus.Registerer) *events.AppWatcher) {
-	fake.createWatcherMutex.Lock()
-	defer fake.createWatcherMutex.Unlock()
-	fake.CreateWatcherStub = stub
+func (fake *FakeWatcherManager) AddWatcherCalls(stub func(cfclient.App, prometheus.Registerer)) {
+	fake.addWatcherMutex.Lock()
+	defer fake.addWatcherMutex.Unlock()
+	fake.AddWatcherStub = stub
 }
 
-func (fake *FakeWatcherManager) CreateWatcherArgsForCall(i int) (cfclient.App, prometheus.Registerer) {
-	fake.createWatcherMutex.RLock()
-	defer fake.createWatcherMutex.RUnlock()
-	argsForCall := fake.createWatcherArgsForCall[i]
+func (fake *FakeWatcherManager) AddWatcherArgsForCall(i int) (cfclient.App, prometheus.Registerer) {
+	fake.addWatcherMutex.RLock()
+	defer fake.addWatcherMutex.RUnlock()
+	argsForCall := fake.addWatcherArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeWatcherManager) CreateWatcherReturns(result1 *events.AppWatcher) {
-	fake.createWatcherMutex.Lock()
-	defer fake.createWatcherMutex.Unlock()
-	fake.CreateWatcherStub = nil
-	fake.createWatcherReturns = struct {
-		result1 *events.AppWatcher
-	}{result1}
-}
-
-func (fake *FakeWatcherManager) CreateWatcherReturnsOnCall(i int, result1 *events.AppWatcher) {
-	fake.createWatcherMutex.Lock()
-	defer fake.createWatcherMutex.Unlock()
-	fake.CreateWatcherStub = nil
-	if fake.createWatcherReturnsOnCall == nil {
-		fake.createWatcherReturnsOnCall = make(map[int]struct {
-			result1 *events.AppWatcher
-		})
-	}
-	fake.createWatcherReturnsOnCall[i] = struct {
-		result1 *events.AppWatcher
-	}{result1}
 }
 
 func (fake *FakeWatcherManager) DeleteWatcher(arg1 string) {
@@ -124,13 +126,225 @@ func (fake *FakeWatcherManager) DeleteWatcherArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
+func (fake *FakeWatcherManager) IsWatched(arg1 string) bool {
+	fake.isWatchedMutex.Lock()
+	ret, specificReturn := fake.isWatchedReturnsOnCall[len(fake.isWatchedArgsForCall)]
+	fake.isWatchedArgsForCall = append(fake.isWatchedArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("IsWatched", []interface{}{arg1})
+	fake.isWatchedMutex.Unlock()
+	if fake.IsWatchedStub != nil {
+		return fake.IsWatchedStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.isWatchedReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeWatcherManager) IsWatchedCallCount() int {
+	fake.isWatchedMutex.RLock()
+	defer fake.isWatchedMutex.RUnlock()
+	return len(fake.isWatchedArgsForCall)
+}
+
+func (fake *FakeWatcherManager) IsWatchedCalls(stub func(string) bool) {
+	fake.isWatchedMutex.Lock()
+	defer fake.isWatchedMutex.Unlock()
+	fake.IsWatchedStub = stub
+}
+
+func (fake *FakeWatcherManager) IsWatchedArgsForCall(i int) string {
+	fake.isWatchedMutex.RLock()
+	defer fake.isWatchedMutex.RUnlock()
+	argsForCall := fake.isWatchedArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeWatcherManager) IsWatchedReturns(result1 bool) {
+	fake.isWatchedMutex.Lock()
+	defer fake.isWatchedMutex.Unlock()
+	fake.IsWatchedStub = nil
+	fake.isWatchedReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) IsWatchedReturnsOnCall(i int, result1 bool) {
+	fake.isWatchedMutex.Lock()
+	defer fake.isWatchedMutex.Unlock()
+	fake.IsWatchedStub = nil
+	if fake.isWatchedReturnsOnCall == nil {
+		fake.isWatchedReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isWatchedReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) NameFor(arg1 string) string {
+	fake.nameForMutex.Lock()
+	ret, specificReturn := fake.nameForReturnsOnCall[len(fake.nameForArgsForCall)]
+	fake.nameForArgsForCall = append(fake.nameForArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("NameFor", []interface{}{arg1})
+	fake.nameForMutex.Unlock()
+	if fake.NameForStub != nil {
+		return fake.NameForStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.nameForReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeWatcherManager) NameForCallCount() int {
+	fake.nameForMutex.RLock()
+	defer fake.nameForMutex.RUnlock()
+	return len(fake.nameForArgsForCall)
+}
+
+func (fake *FakeWatcherManager) NameForCalls(stub func(string) string) {
+	fake.nameForMutex.Lock()
+	defer fake.nameForMutex.Unlock()
+	fake.NameForStub = stub
+}
+
+func (fake *FakeWatcherManager) NameForArgsForCall(i int) string {
+	fake.nameForMutex.RLock()
+	defer fake.nameForMutex.RUnlock()
+	argsForCall := fake.nameForArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeWatcherManager) NameForReturns(result1 string) {
+	fake.nameForMutex.Lock()
+	defer fake.nameForMutex.Unlock()
+	fake.NameForStub = nil
+	fake.nameForReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) NameForReturnsOnCall(i int, result1 string) {
+	fake.nameForMutex.Lock()
+	defer fake.nameForMutex.Unlock()
+	fake.NameForStub = nil
+	if fake.nameForReturnsOnCall == nil {
+		fake.nameForReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.nameForReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) TrackedGuids() []string {
+	fake.trackedGuidsMutex.Lock()
+	ret, specificReturn := fake.trackedGuidsReturnsOnCall[len(fake.trackedGuidsArgsForCall)]
+	fake.trackedGuidsArgsForCall = append(fake.trackedGuidsArgsForCall, struct {
+	}{})
+	fake.recordInvocation("TrackedGuids", []interface{}{})
+	fake.trackedGuidsMutex.Unlock()
+	if fake.TrackedGuidsStub != nil {
+		return fake.TrackedGuidsStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.trackedGuidsReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeWatcherManager) TrackedGuidsCallCount() int {
+	fake.trackedGuidsMutex.RLock()
+	defer fake.trackedGuidsMutex.RUnlock()
+	return len(fake.trackedGuidsArgsForCall)
+}
+
+func (fake *FakeWatcherManager) TrackedGuidsCalls(stub func() []string) {
+	fake.trackedGuidsMutex.Lock()
+	defer fake.trackedGuidsMutex.Unlock()
+	fake.TrackedGuidsStub = stub
+}
+
+func (fake *FakeWatcherManager) TrackedGuidsReturns(result1 []string) {
+	fake.trackedGuidsMutex.Lock()
+	defer fake.trackedGuidsMutex.Unlock()
+	fake.TrackedGuidsStub = nil
+	fake.trackedGuidsReturns = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) TrackedGuidsReturnsOnCall(i int, result1 []string) {
+	fake.trackedGuidsMutex.Lock()
+	defer fake.trackedGuidsMutex.Unlock()
+	fake.TrackedGuidsStub = nil
+	if fake.trackedGuidsReturnsOnCall == nil {
+		fake.trackedGuidsReturnsOnCall = make(map[int]struct {
+			result1 []string
+		})
+	}
+	fake.trackedGuidsReturnsOnCall[i] = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstances(arg1 string, arg2 int) {
+	fake.updateAppInstancesMutex.Lock()
+	fake.updateAppInstancesArgsForCall = append(fake.updateAppInstancesArgsForCall, struct {
+		arg1 string
+		arg2 int
+	}{arg1, arg2})
+	fake.recordInvocation("UpdateAppInstances", []interface{}{arg1, arg2})
+	fake.updateAppInstancesMutex.Unlock()
+	if fake.UpdateAppInstancesStub != nil {
+		fake.UpdateAppInstancesStub(arg1, arg2)
+	}
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstancesCallCount() int {
+	fake.updateAppInstancesMutex.RLock()
+	defer fake.updateAppInstancesMutex.RUnlock()
+	return len(fake.updateAppInstancesArgsForCall)
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstancesCalls(stub func(string, int)) {
+	fake.updateAppInstancesMutex.Lock()
+	defer fake.updateAppInstancesMutex.Unlock()
+	fake.UpdateAppInstancesStub = stub
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) (string, int) {
+	fake.updateAppInstancesMutex.RLock()
+	defer fake.updateAppInstancesMutex.RUnlock()
+	argsForCall := fake.updateAppInstancesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
 func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createWatcherMutex.RLock()
-	defer fake.createWatcherMutex.RUnlock()
+	fake.addWatcherMutex.RLock()
+	defer fake.addWatcherMutex.RUnlock()
 	fake.deleteWatcherMutex.RLock()
 	defer fake.deleteWatcherMutex.RUnlock()
+	fake.isWatchedMutex.RLock()
+	defer fake.isWatchedMutex.RUnlock()
+	fake.nameForMutex.RLock()
+	defer fake.nameForMutex.RUnlock()
+	fake.trackedGuidsMutex.RLock()
+	defer fake.trackedGuidsMutex.RUnlock()
+	fake.updateAppInstancesMutex.RLock()
+	defer fake.updateAppInstancesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

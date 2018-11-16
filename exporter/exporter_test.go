@@ -31,7 +31,7 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherManager.CreateWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 	})
 
 	FIt("deletes an AppWatcher when an app is deleted", func() {
@@ -44,7 +44,7 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherManager.CreateWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 	})
 
