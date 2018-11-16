@@ -110,10 +110,6 @@ func (e *PaasExporter) checkForNewApps() error {
 	return nil
 }
 
-func (e *PaasExporter) WatcherCount() int {
-	return 42
-}
-
 func (e *PaasExporter) Start(updateFrequency time.Duration) {
 	for {
 		log.Println("checking for new apps")
