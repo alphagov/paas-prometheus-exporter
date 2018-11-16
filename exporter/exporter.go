@@ -47,22 +47,29 @@ func (wm *ConcreteWatcherManager) AddWatcher(app cfclient.App, registry promethe
 }
 
 func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
-
+	wm.watchers[appGuid].Close()
+	delete(wm.watchers, appGuid)
 }
 
 func (wm *ConcreteWatcherManager) IsWatched(appGuid string) bool {
-	return false
+	_, ok := wm.watchers[appGuid]
+	return ok
 }
 
 func (wm *ConcreteWatcherManager) NameFor(appGuid string) string {
-	return " "
+	return wm.watchers[appGuid].AppName()
 }
 
 func (wm *ConcreteWatcherManager) UpdateAppInstances(appGuid string, instances int) {
+	wm.watchers[appGuid].UpdateAppInstances(instances)
 }
 
 func (wm *ConcreteWatcherManager) TrackedGuids() []string {
-	return []string{}
+	var guids []string
+	for guid, _ := range wm.watchers {
+		guids = append(guids, guid)
+	}
+	return guids
 }
 
 type PaasExporter struct {
