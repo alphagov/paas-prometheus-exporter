@@ -3,7 +3,6 @@ package events
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-community/go-cfclient"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -37,18 +36,19 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 }
 
 func NewAppWatcher(
-	app cfclient.App,
+	appGuid string,
+	appInstances int,
 	registerer prometheus.Registerer,
 	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
 		MetricsForInstance:    make([]InstanceMetrics, 0),
-		appGuid:               app.Guid,
+		appGuid:               appGuid,
 		registerer:            registerer,
 		numberOfInstancesChan: make(chan int, 5),
 		streamProvider:        streamProvider,
 	}
-	appWatcher.scaleTo(app.Instances)
+	appWatcher.scaleTo(appInstances)
 
 	// FIXME: what if the appWatcher errors? we currently ignore it
 	go appWatcher.Run()

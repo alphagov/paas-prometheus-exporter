@@ -64,7 +64,7 @@ var _ = Describe("AppWatcher", func() {
 
 		registerer = &FakeRegistry{}
 		streamProvider = &mocks.FakeAppStreamProvider{}
-		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
+		appWatcher = events.NewAppWatcher(apps[0].Guid, apps[0].Instances, registerer, streamProvider)
 	})
 	AfterEach(func() {})
 

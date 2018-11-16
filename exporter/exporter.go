@@ -42,7 +42,7 @@ func (wm *ConcreteWatcherManager) AddWatcher(app cfclient.App, registry promethe
 	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
 		Config: wm.config,
 	}
-	wm.watchers[app.Guid] =	events.NewAppWatcher(app, registry, provider)
+	wm.watchers[app.Guid] =	events.NewAppWatcher(app.Guid, app.Instances, registry, provider)
 }
 
 func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
