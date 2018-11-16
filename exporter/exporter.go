@@ -77,6 +77,7 @@ func New(cf CFClient, wc WatcherManager) *PaasExporter {
 	return &PaasExporter{
 		cf:             cf,
 		watcherManager: wc,
+		nameByGuid:     make(map[string]string),
 	}
 }
 
@@ -116,7 +117,7 @@ func (e *PaasExporter) checkForNewApps() error {
 		}
 	}
 
-	for _, appGuid := range e.watcherManager.TrackedGuids() {
+	for appGuid, _ := range e.nameByGuid {
 		if ok := running[appGuid]; !ok {
 			e.watcherManager.DeleteWatcher(appGuid)
 		}
