@@ -23,7 +23,6 @@ type WatcherManager interface {
 	DeleteWatcher(appGuid string)
 	IsWatched(appGuid string) bool
 	UpdateAppInstances(appGuid string, instances int)
-	TrackedGuids() []string
 }
 
 type ConcreteWatcherManager struct {
@@ -57,14 +56,6 @@ func (wm *ConcreteWatcherManager) IsWatched(appGuid string) bool {
 
 func (wm *ConcreteWatcherManager) UpdateAppInstances(appGuid string, instances int) {
 	wm.watchers[appGuid].UpdateAppInstances(instances)
-}
-
-func (wm *ConcreteWatcherManager) TrackedGuids() []string {
-	var guids []string
-	for guid, _ := range wm.watchers {
-		guids = append(guids, guid)
-	}
-	return guids
 }
 
 type PaasExporter struct {
