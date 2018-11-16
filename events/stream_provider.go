@@ -11,34 +11,44 @@ import (
 //go:generate counterfeiter -o mocks/stream_provider.go . AppStreamProvider
 type AppStreamProvider interface {
 	OpenStreamFor(appGuid string) (<-chan *sonde_events.Envelope, <-chan error)
+	Close() error
+}
+
+type closable interface {
+	Close() error
 }
 
 type DopplerAppStreamProvider struct {
-	Config             *cfclient.Config
-	cfClient           *cfclient.Client
+	Config   *cfclient.Config
+	cfClient *cfclient.Client
+	conn     closable
 }
 
-func (m *DopplerAppStreamProvider) OpenStreamFor(appGuid string) ( <-chan *sonde_events.Envelope, <-chan error) {
+func (m *DopplerAppStreamProvider) OpenStreamFor(appGuid string) (<-chan *sonde_events.Envelope, <-chan error) {
 	err := m.authenticate()
 	if err != nil {
 		errs := make(chan error,1)
-		errs <- err 
+		errs <- err
 		return nil, errs
 	}
 	tlsConfig := tls.Config{InsecureSkipVerify: false} // TODO: is this needed?
 	conn := consumer.New(m.cfClient.Endpoint.DopplerEndpoint, &tlsConfig, nil)
+	m.conn = conn
 	conn.RefreshTokenFrom(m)
-	defer conn.Close()
 
 	authToken, err := m.cfClient.GetToken()
 	if err != nil {
 		errs := make(chan error,1)
-		errs <- err 
+		errs <- err
 		return nil, errs
 	}
 
 	msgs, errs := conn.Stream(appGuid, authToken)
 	return msgs, errs
+}
+
+func (m *DopplerAppStreamProvider) Close() error {
+	return m.conn.Close()
 }
 
 // RefreshAuthToken satisfies the `consumer.TokenRefresher` interface.

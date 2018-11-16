@@ -59,8 +59,10 @@ func NewAppWatcher(
 
 func (m *AppWatcher) Run() error {
 	msgs, errs := m.streamProvider.OpenStreamFor(m.appGuid)
+	defer m.streamProvider.Close()
 
-	return m.mainLoop(msgs, errs)
+	err := m.mainLoop(msgs, errs)
+	return err
 }
 
 func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan error) error {
