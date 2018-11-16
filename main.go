@@ -1,11 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"net/http"
 	"time"
 
-  "github.com/alphagov/paas-prometheus-exporter/app"
+	"github.com/alphagov/paas-prometheus-exporter/exporter"
+	"github.com/cloudfoundry-community/go-cfclient"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
-	// "os"
 )
 
 var (
@@ -35,5 +39,24 @@ var (
 func main() {
 	kingpin.Parse()
 
-	app.StartApp(*apiEndpoint, *skipSSLValidation, *username, *password, *clientID, *clientSecret, time.Duration(*updateFrequency) * time.Second, *prometheusBindPort)
+	config := &cfclient.Config{
+		ApiAddress:        *apiEndpoint,
+		SkipSslValidation: *skipSSLValidation,
+		Username:          *username,
+		Password:          *password,
+		ClientID:          *clientID,
+		ClientSecret:      *clientSecret,
+	}
+
+	cf, err := cfclient.NewClient(config)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	e := exporter.New(cf, &exporter.ConcreteWatcherManager{
+		Config: config,
+	})
+	go e.Start(time.Duration(*updateFrequency) * time.Second)
+	http.Handle("/metrics", promhttp.Handler())
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *prometheusBindPort), nil))
 }

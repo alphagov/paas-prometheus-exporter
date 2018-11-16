@@ -1,33 +1,31 @@
 package events
 
 import (
-	"crypto/tls"
 	"fmt"
 
 	"github.com/cloudfoundry-community/go-cfclient"
-	"github.com/cloudfoundry/noaa/consumer"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type AppWatcher struct {
-	config             *cfclient.Config
-	cfClient           *cfclient.Client
-	metricsForInstance []InstanceMetrics
-	app                cfclient.App
-	appUpdateChan      chan cfclient.App
-	registerer         prometheus.Registerer
+	MetricsForInstance    []InstanceMetrics
+	appName               string
+	appGuid               string
+	numberOfInstancesChan chan int
+	registerer            prometheus.Registerer
+	streamProvider        AppStreamProvider
 }
 
 type InstanceMetrics struct {
-	cpu prometheus.Gauge
+	Cpu prometheus.Gauge
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
 	im := InstanceMetrics{
-		cpu: prometheus.NewGauge(
+		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "cpu",
+				Name: "Cpu",
 				Help: " ",
 				ConstLabels: prometheus.Labels{
 					"instance": fmt.Sprintf("%d", instanceIndex),
@@ -35,68 +33,32 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 			},
 		),
 	}
-	registerer.MustRegister(im.cpu)
+	registerer.MustRegister(im.Cpu)
 	return im
 }
 
 func NewAppWatcher(
-	config *cfclient.Config,
 	app cfclient.App,
 	registerer prometheus.Registerer,
+	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
-		metricsForInstance: make([]InstanceMetrics, 0),
-		config:             config,
-		app:                app,
-		registerer:         registerer,
-		appUpdateChan:      make(chan cfclient.App, 5),
+		MetricsForInstance:    make([]InstanceMetrics, 0),
+		appName:               app.Name,
+		appGuid:               app.Guid,
+		registerer:            registerer,
+		numberOfInstancesChan: make(chan int, 5),
+		streamProvider:        streamProvider,
 	}
 	appWatcher.scaleTo(app.Instances)
+
+	// FIXME: what if the appWatcher errors? we currently ignore it
+	go appWatcher.Run()
 	return appWatcher
 }
 
-// RefreshAuthToken satisfies the `consumer.TokenRefresher` interface.
-func (m *AppWatcher) RefreshAuthToken() (token string, authError error) {
-	token, err := m.cfClient.GetToken()
-	if err != nil {
-		err := m.authenticate()
-
-		if err != nil {
-			return "", err
-		}
-
-		return m.cfClient.GetToken()
-	}
-
-	return token, nil
-}
-
-func (m *AppWatcher) authenticate() (err error) {
-	client, err := cfclient.NewClient(m.config)
-	if err != nil {
-		return err
-	}
-
-	m.cfClient = client
-	return nil
-}
-
 func (m *AppWatcher) Run() error {
-	err := m.authenticate()
-	if err != nil {
-		return err
-	}
-	tlsConfig := tls.Config{InsecureSkipVerify: false} // TODO: is this needed?
-	conn := consumer.New(m.cfClient.Endpoint.DopplerEndpoint, &tlsConfig, nil)
-	conn.RefreshTokenFrom(m)
-	defer conn.Close()
-
-	authToken, err := m.cfClient.GetToken()
-	if err != nil {
-		return err
-	}
-
-	msgs, errs := conn.Stream(m.app.Guid, authToken)
+	msgs, errs := m.streamProvider.OpenStreamFor(m.appGuid)
 
 	return m.mainLoop(msgs, errs)
 }
@@ -124,55 +86,52 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 				continue
 			}
 			return err
-		case updatedApp, ok := <-m.appUpdateChan:
+		case newNumberOfInstances, ok := <-m.numberOfInstancesChan:
 			if !ok {
 				m.scaleTo(0)
 				return nil
 			}
 
-			if updatedApp.Instances != m.app.Instances {
-				m.scaleTo(updatedApp.Instances)
-			}
-			m.app = updatedApp
+			m.scaleTo(newNumberOfInstances)
 		}
 	}
 }
 
 func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric) {
 	index := metric.GetInstanceIndex()
-	if int(index) < len(m.metricsForInstance) {
-		instance := m.metricsForInstance[index]
-		instance.cpu.Set(metric.GetCpuPercentage())
+	if int(index) < len(m.MetricsForInstance) {
+		instance := m.MetricsForInstance[index]
+		instance.Cpu.Set(metric.GetCpuPercentage())
 	}
 }
 
 func (m *AppWatcher) AppName() string {
-	return m.app.Name
+	return m.appName
 }
 
-func (m *AppWatcher) UpdateApp(app cfclient.App) {
-	m.appUpdateChan <- app
+func (m *AppWatcher) UpdateAppInstances(newNumberOfInstances int) {
+	m.numberOfInstancesChan <- newNumberOfInstances
 }
 
 func (m *AppWatcher) Close() {
-	close(m.appUpdateChan)
+	close(m.numberOfInstancesChan)
 }
 
 func (m *AppWatcher) scaleTo(newInstanceCount int) {
-	currentInstanceCount := len(m.metricsForInstance)
+	currentInstanceCount := len(m.MetricsForInstance)
 
 	if currentInstanceCount < newInstanceCount {
 		for i := currentInstanceCount; i < newInstanceCount; i++ {
-			m.metricsForInstance = append(m.metricsForInstance, NewInstanceMetrics(i, m.registerer))
+			m.MetricsForInstance = append(m.MetricsForInstance, NewInstanceMetrics(i, m.registerer))
 		}
 	} else {
 		for i := currentInstanceCount; i > newInstanceCount; i-- {
 			m.unregisterInstanceMetrics(i - 1)
 		}
-		m.metricsForInstance = m.metricsForInstance[0:newInstanceCount]
+		m.MetricsForInstance = m.MetricsForInstance[0:newInstanceCount]
 	}
 }
 
 func (m *AppWatcher) unregisterInstanceMetrics(instanceIndex int) {
-	m.registerer.Unregister(m.metricsForInstance[instanceIndex].cpu)
+	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].Cpu)
 }

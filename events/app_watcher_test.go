@@ -1,4 +1,4 @@
-package events
+package events_test
 
 import (
 	"errors"
@@ -7,6 +7,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/alphagov/paas-prometheus-exporter/events"
+	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
 	"github.com/cloudfoundry-community/go-cfclient"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -15,7 +17,7 @@ import (
 
 type FakeRegistry struct {
 	mustRegisterCount int
-	unregisterCount int
+	unregisterCount   int
 	sync.Mutex
 }
 
@@ -50,28 +52,19 @@ func (m *FakeRegistry) UnregisterCallCount() int {
 
 var _ = Describe("AppWatcher", func() {
 	var (
-		appWatcher *AppWatcher
-		// Apps        []cfclient.App
-		registerer *FakeRegistry
+		appWatcher     *events.AppWatcher
+		registerer     *FakeRegistry
+		streamProvider *mocks.FakeAppStreamProvider
 	)
 
 	BeforeEach(func() {
-
-		config := &cfclient.Config{
-			ApiAddress:        "some/endpoint",
-			SkipSslValidation: true,
-			Username:          "barry",
-			Password:          "password",
-			ClientID:          "dummy_client_id",
-			ClientSecret:      "dummy_client_secret",
-		}
-
 		apps := []cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}
 
 		registerer = &FakeRegistry{}
-		appWatcher = NewAppWatcher(config, apps[0], registerer)
+		streamProvider = &mocks.FakeAppStreamProvider{}
+		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
 	})
 	AfterEach(func() {})
 
@@ -81,16 +74,16 @@ var _ = Describe("AppWatcher", func() {
 		})
 	})
 
-	Describe("mainLoop", func() {
+	Describe("Run", func() {
 		It("Registers metrics on startup", func() {
-			go appWatcher.mainLoop(nil, nil)
-			defer appWatcher.Close()
+			// go appWatcher.Run()
+			// defer appWatcher.Close()
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 		})
 
 		It("Unregisters metrics on close", func() {
-			go appWatcher.mainLoop(nil, nil)
+			go appWatcher.Run()
 
 			appWatcher.Close()
 
@@ -98,46 +91,29 @@ var _ = Describe("AppWatcher", func() {
 		})
 
 		It("Registers more metrics when new instances are created", func() {
-			go appWatcher.mainLoop(nil, nil)
+			go appWatcher.Run()
 			defer appWatcher.Close()
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
 
-			appWatcher.UpdateApp(cfclient.App{
-				Guid: "33333333-3333-3333-3333-333333333333",
-				Instances: 2,
-				Name: "foo",
-				SpaceURL: "/v2/spaces/123",
-			})
+			appWatcher.UpdateAppInstances(2)
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 		})
 
 		It("Unregisters some metrics when old instances are deleted", func() {
-			go appWatcher.mainLoop(nil, nil)
+			go appWatcher.Run()
 			defer appWatcher.Close()
 
-			appWatcher.UpdateApp(cfclient.App{
-				Guid: "33333333-3333-3333-3333-333333333333",
-				Instances: 2,
-				Name: "foo",
-				SpaceURL: "/v2/spaces/123",
-			})
+			appWatcher.UpdateAppInstances(2)
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
 
-			appWatcher.UpdateApp(cfclient.App{
-				Guid: "33333333-3333-3333-3333-333333333333",
-				Instances: 1,
-				Name: "foo",
-				SpaceURL: "/v2/spaces/123",
-			})
+			appWatcher.UpdateAppInstances(1)
 
 			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
 		})
-	})
 
-	Describe("processContainerMetrics", func() {
 		It("sets a CPU metric on an instance", func() {
 			cpuPercentage := 10.0
 			var instanceIndex int32 = 0
@@ -145,10 +121,17 @@ var _ = Describe("AppWatcher", func() {
 				CpuPercentage: &cpuPercentage,
 				InstanceIndex: &instanceIndex,
 			}
-			appWatcher.processContainerMetric(&containerMetric)
-			cpuGauge := appWatcher.metricsForInstance[instanceIndex].cpu
+			messages := make(chan *sonde_events.Envelope, 1)
+			metricType := sonde_events.Envelope_ContainerMetric
+			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
+			streamProvider.OpenStreamForReturns(messages, nil)
 
-			Expect(testutil.ToFloat64(cpuGauge)).To(Equal(cpuPercentage))
+			go appWatcher.Run()
+			defer appWatcher.Close()
+
+			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
+
+			Eventually(func() float64 { return testutil.ToFloat64(cpuGauge) }).Should(Equal(cpuPercentage))
 		})
 	})
 })
