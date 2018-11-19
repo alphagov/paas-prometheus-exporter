@@ -17,19 +17,19 @@ type CFClient interface {
 type PaasExporter struct {
 	cf             CFClient
 	watcherManager WatcherManager
-	nameByGuid     map[string]string
+	appNameByGuid  map[string]string
 }
 
-func New(cf CFClient, wc WatcherManager) *PaasExporter {
+func New(cf CFClient, wm WatcherManager) *PaasExporter {
 	return &PaasExporter{
 		cf:             cf,
-		watcherManager: wc,
-		nameByGuid:     make(map[string]string),
+		watcherManager: wm,
+		appNameByGuid:  make(map[string]string),
 	}
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	e.nameByGuid[app.Guid] = app.Name
+	e.appNameByGuid[app.Guid] = app.Name
 	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{"guid": app.Guid, "app": app.Name},
 		prometheus.DefaultRegisterer,
@@ -45,12 +45,12 @@ func (e *PaasExporter) checkForNewApps() error {
 	running := map[string]bool{}
 
 	for _, app := range apps {
-		// Do we need to check they're running or does the API return all of them?
+		// TODO Do we need to check they're running or does the API return all of them?
 		// need to check app.State is "STARTED"
 		running[app.Guid] = true
 
-		if _, ok := e.nameByGuid[app.Guid]; ok {
-			if e.nameByGuid[app.Guid] != app.Name {
+		if _, ok := e.appNameByGuid[app.Guid]; ok {
+			if e.appNameByGuid[app.Guid] != app.Name {
 				// Name changed, stop and restart
 				e.watcherManager.DeleteWatcher(app.Guid)
 				e.createNewWatcher(app)
@@ -64,7 +64,7 @@ func (e *PaasExporter) checkForNewApps() error {
 		}
 	}
 
-	for appGuid, _ := range e.nameByGuid {
+	for appGuid, _ := range e.appNameByGuid {
 		if ok := running[appGuid]; !ok {
 			e.watcherManager.DeleteWatcher(appGuid)
 		}

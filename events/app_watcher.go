@@ -8,8 +8,8 @@ import (
 )
 
 type AppWatcher struct {
-	MetricsForInstance    []InstanceMetrics
 	appGuid               string
+	MetricsForInstance    []InstanceMetrics
 	numberOfInstancesChan chan int
 	registerer            prometheus.Registerer
 	streamProvider        AppStreamProvider
@@ -42,10 +42,10 @@ func NewAppWatcher(
 	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
-		MetricsForInstance:    make([]InstanceMetrics, 0),
 		appGuid:               appGuid,
-		registerer:            registerer,
+		MetricsForInstance:    make([]InstanceMetrics, 0),
 		numberOfInstancesChan: make(chan int, 5),
+		registerer:            registerer,
 		streamProvider:        streamProvider,
 	}
 	appWatcher.scaleTo(appInstances)
