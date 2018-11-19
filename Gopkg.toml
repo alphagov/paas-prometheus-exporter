@@ -31,12 +31,6 @@
   name = "github.com/cloudfoundry/sonde-go"
 
 [[constraint]]
-  name = "github.com/gogo/protobuf"
-
-[[constraint]]
-  name = "github.com/gorilla/websocket"
-
-[[constraint]]
   name = "github.com/onsi/ginkgo"
 
 [[constraint]]
@@ -45,15 +39,6 @@
 [[constraint]]
   name = "github.com/prometheus/client_golang"
   version = "0.9.1"
-
-[[constraint]]
-  name = "github.com/prometheus/client_model"
-
-[[constraint]]
-  name = "github.com/quipo/statsd"
-
-[[constraint]]
-  name = "golang.org/x/oauth2"
 
 [[constraint]]
   name = "gopkg.in/alecthomas/kingpin.v2"
