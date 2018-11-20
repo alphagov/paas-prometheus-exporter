@@ -74,19 +74,19 @@ var _ = Describe("AppWatcher", func() {
 		It("Registers metrics on startup", func() {
 			defer appWatcher.Close()
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 		})
 
 		It("Unregisters metrics on close", func() {
 			appWatcher.Close()
 
-			Eventually(registerer.UnregisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
+			Eventually(registerer.UnregisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 		})
 
 		It("Registers more metrics when new instances are created", func() {
 			defer appWatcher.Close()
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 
 			appWatcher.UpdateAppInstances(2)
 
@@ -102,7 +102,7 @@ var _ = Describe("AppWatcher", func() {
 
 			appWatcher.UpdateAppInstances(1)
 
-			Eventually(registerer.UnregisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
+			Eventually(registerer.UnregisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 		})
 
 		It("sets container metrics for an instance", func() {
