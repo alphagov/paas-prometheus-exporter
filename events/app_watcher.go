@@ -24,50 +24,44 @@ type InstanceMetrics struct {
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
+	constLabels := prometheus.Labels{
+		"instance": fmt.Sprintf("%d", instanceIndex),
+	}
+
 	im := InstanceMetrics{
 		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "cpu",
 				Help: "CPU utilisation in percent (0-100)",
-				ConstLabels: prometheus.Labels{
-					"instance": fmt.Sprintf("%d", instanceIndex),
-				},
+				ConstLabels: constLabels,
 			},
 		),
 		DiskBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "diskBytes",
 				Help: "Disk usage in bytes",
-				ConstLabels: prometheus.Labels{
-					"instance": fmt.Sprintf("%d", instanceIndex),
-				},
+				ConstLabels: constLabels,
 			},
 		),
 		DiskUtilization: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "diskUtilization",
 				Help: "Disk utilisation in percent (0-100)",
-				ConstLabels: prometheus.Labels{
-					"instance": fmt.Sprintf("%d", instanceIndex),
-				},
+				ConstLabels: constLabels,
 			},
 		),
 		MemoryBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "memoryBytes",
 				Help: "Memory usage in bytes",
-				ConstLabels: prometheus.Labels{
-					"instance": fmt.Sprintf("%d", instanceIndex),
-				},
+				ConstLabels: constLabels,
 			},
 		),
 		MemoryUtilization: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "memoryUtilization",
 				Help: "Memory utilisation in percent (0-100)",
-				ConstLabels: prometheus.Labels{
-					"instance": fmt.Sprintf("%d", instanceIndex),
-				},
+				ConstLabels: constLabels,
 			},
 		),
 	}
