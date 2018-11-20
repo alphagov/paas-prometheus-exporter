@@ -105,13 +105,24 @@ var _ = Describe("AppWatcher", func() {
 			Eventually(registerer.UnregisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
 		})
 
-		It("sets a CPU metric on an instance", func() {
-			cpuPercentage := 10.0
+		It("sets container metrics for an instance", func() {
 			var instanceIndex int32 = 0
+
+			cpuPercentage := 10.0
+			var diskBytes uint64 = 512
+			var diskBytesQuota uint64 = 1024
+			var memoryBytes uint64 = 1024
+			var memoryBytesQuota uint64 = 4096
+
 			containerMetric := sonde_events.ContainerMetric{
-				CpuPercentage: &cpuPercentage,
-				InstanceIndex: &instanceIndex,
+				CpuPercentage:    &cpuPercentage,
+				DiskBytes:        &diskBytes,
+				DiskBytesQuota:   &diskBytesQuota,
+				InstanceIndex:    &instanceIndex,
+				MemoryBytes:      &memoryBytes,
+				MemoryBytesQuota: &memoryBytesQuota,
 			}
+
 			messages := make(chan *sonde_events.Envelope, 1)
 			metricType := sonde_events.Envelope_ContainerMetric
 			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
@@ -120,88 +131,16 @@ var _ = Describe("AppWatcher", func() {
 			defer appWatcher.Close()
 
 			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
-
-			Eventually(func() float64 { return testutil.ToFloat64(cpuGauge) }).Should(Equal(cpuPercentage))
-		})
-
-		It("sets a diskBytes metric on an instance", func() {
-			var diskBytes uint64 = 2300
-			var instanceIndex int32 = 0
-			containerMetric := sonde_events.ContainerMetric{
-				DiskBytes:     &diskBytes,
-				InstanceIndex: &instanceIndex,
-			}
-			messages := make(chan *sonde_events.Envelope, 1)
-			metricType := sonde_events.Envelope_ContainerMetric
-			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
-			streamProvider.OpenStreamForReturns(messages, nil)
-
-			defer appWatcher.Close()
-
 			diskBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
-
-			Eventually(func() float64 { return testutil.ToFloat64(diskBytesGauge) }).Should(Equal(float64(diskBytes)))
-		})
-
-		It("sets a memoryBytes metric on an instance", func() {
-			var memoryBytes uint64 = 2301
-			var instanceIndex int32 = 0
-			containerMetric := sonde_events.ContainerMetric{
-				DiskBytes:     &memoryBytes,
-				InstanceIndex: &instanceIndex,
-			}
-			messages := make(chan *sonde_events.Envelope, 1)
-			metricType := sonde_events.Envelope_ContainerMetric
-			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
-			streamProvider.OpenStreamForReturns(messages, nil)
-
-			defer appWatcher.Close()
-
-			memoryBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
-
-			Eventually(func() float64 { return testutil.ToFloat64(memoryBytesGauge) }).Should(Equal(float64(memoryBytes)))
-		})
-
-		It("sets a diskUtilization metric on an instance", func() {
-			var diskBytesQuota uint64 = 1024
-			var diskBytes uint64 = 512
-			var instanceIndex int32 = 0
-			containerMetric := sonde_events.ContainerMetric{
-				DiskBytes:      &diskBytes,
-				DiskBytesQuota: &diskBytesQuota,
-				InstanceIndex:  &instanceIndex,
-			}
-			messages := make(chan *sonde_events.Envelope, 1)
-			metricType := sonde_events.Envelope_ContainerMetric
-			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
-			streamProvider.OpenStreamForReturns(messages, nil)
-
-			defer appWatcher.Close()
-
 			diskUtilizationGauge := appWatcher.MetricsForInstance[instanceIndex].DiskUtilization
-
-			Eventually(func() float64 { return testutil.ToFloat64(diskUtilizationGauge) }).Should(Equal(float64(50)))
-		})
-
-		It("sets a memoryUtilization metric on an instance", func() {
-			var memoryBytesQuota uint64 = 1024
-			var memoryBytes uint64 = 512
-			var instanceIndex int32 = 0
-			containerMetric := sonde_events.ContainerMetric{
-				MemoryBytes:      &memoryBytes,
-				MemoryBytesQuota: &memoryBytesQuota,
-				InstanceIndex:    &instanceIndex,
-			}
-			messages := make(chan *sonde_events.Envelope, 1)
-			metricType := sonde_events.Envelope_ContainerMetric
-			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
-			streamProvider.OpenStreamForReturns(messages, nil)
-
-			defer appWatcher.Close()
-
+			memoryBytesGauge := appWatcher.MetricsForInstance[instanceIndex].MemoryBytes
 			memoryUtilizationGauge := appWatcher.MetricsForInstance[instanceIndex].MemoryUtilization
 
-			Eventually(func() float64 { return testutil.ToFloat64(memoryUtilizationGauge) }).Should(Equal(float64(50)))
+			Eventually(func() float64 { return testutil.ToFloat64(cpuGauge) }).Should(Equal(cpuPercentage))
+			Eventually(func() float64 { return testutil.ToFloat64(diskBytesGauge) }).Should(Equal(float64(diskBytes)))
+			Eventually(func() float64 { return testutil.ToFloat64(diskUtilizationGauge) }).Should(Equal(float64(50)))
+			Eventually(func() float64 { return testutil.ToFloat64(memoryBytesGauge) }).Should(Equal(float64(memoryBytes)))
+			Eventually(func() float64 { return testutil.ToFloat64(memoryUtilizationGauge) }).Should(Equal(float64(25)))
 		})
 	})
 })
