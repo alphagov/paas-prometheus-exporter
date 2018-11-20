@@ -20,6 +20,7 @@ type InstanceMetrics struct {
 	DiskBytes         prometheus.Gauge
 	DiskUtilization   prometheus.Gauge
 	MemoryBytes       prometheus.Gauge
+	MemoryUtilization prometheus.Gauge
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
@@ -60,12 +61,22 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 				},
 			},
 		),
+		MemoryUtilization: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "memoryUtilization",
+				Help: "Memory utilisation in percent (0-100)",
+				ConstLabels: prometheus.Labels{
+					"instance": fmt.Sprintf("%d", instanceIndex),
+				},
+			},
+		),
 	}
 
 	registerer.MustRegister(im.Cpu)
 	registerer.MustRegister(im.DiskBytes)
 	registerer.MustRegister(im.DiskUtilization)
 	registerer.MustRegister(im.MemoryBytes)
+	registerer.MustRegister(im.MemoryUtilization)
 	return im
 }
 
@@ -138,11 +149,13 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 
 		cpuPercentage := int(metric.GetCpuPercentage())
 		diskUtilizationPercentage := int(float64(metric.GetDiskBytes()) / float64(metric.GetDiskBytesQuota()) * 100)
+		memoryUtilizationPercentage := int(float64(metric.GetMemoryBytes()) / float64(metric.GetMemoryBytesQuota()) * 100)
 
 		instance.Cpu.Set(float64(cpuPercentage))
 		instance.DiskBytes.Set(float64(metric.GetDiskBytes()))
 		instance.DiskUtilization.Set(float64(diskUtilizationPercentage))
 		instance.MemoryBytes.Set(float64(metric.GetMemoryBytes()))
+		instance.MemoryUtilization.Set(float64(memoryUtilizationPercentage))
 	}
 }
 
@@ -174,4 +187,5 @@ func (m *AppWatcher) unregisterInstanceMetrics(instanceIndex int) {
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskBytes)
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskUtilization)
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].MemoryBytes)
+	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].MemoryUtilization)
 }
