@@ -2,6 +2,7 @@ package events
 
 import (
 	"fmt"
+	"log"
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,9 +17,10 @@ type AppWatcher struct {
 }
 
 type InstanceMetrics struct {
-	Cpu         prometheus.Gauge
-	DiskBytes   prometheus.Gauge
-	MemoryBytes prometheus.Gauge
+	Cpu               prometheus.Gauge
+	DiskBytes         prometheus.Gauge
+	DiskUtilization   prometheus.Gauge
+	MemoryBytes       prometheus.Gauge
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
@@ -41,9 +43,18 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 				},
 			},
 		),
+		DiskUtilization: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "diskUtilization",
+				Help: "Disk utilisation in percent (0-100)",
+				ConstLabels: prometheus.Labels{
+					"instance": fmt.Sprintf("%d", instanceIndex),
+				},
+			},
+		),
 		MemoryBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "diskBytes",
+				Name: "memoryBytes",
 				Help: "Memory usage in bytes",
 				ConstLabels: prometheus.Labels{
 					"instance": fmt.Sprintf("%d", instanceIndex),
@@ -54,6 +65,7 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 
 	registerer.MustRegister(im.Cpu)
 	registerer.MustRegister(im.DiskBytes)
+	registerer.MustRegister(im.DiskUtilization)
 	registerer.MustRegister(im.MemoryBytes)
 	return im
 }
@@ -124,8 +136,12 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 	index := metric.GetInstanceIndex()
 	if int(index) < len(m.MetricsForInstance) {
 		instance := m.MetricsForInstance[index]
+
+		diskUtilization := float64(metric.GetDiskBytes()) / float64(metric.GetDiskBytesQuota()) * 100
+
 		instance.Cpu.Set(metric.GetCpuPercentage())
 		instance.DiskBytes.Set(float64(metric.GetDiskBytes()))
+		instance.DiskUtilization.Set(float64(int(diskUtilization)))
 		instance.MemoryBytes.Set(float64(metric.GetMemoryBytes()))
 	}
 }
@@ -156,5 +172,6 @@ func (m *AppWatcher) scaleTo(newInstanceCount int) {
 func (m *AppWatcher) unregisterInstanceMetrics(instanceIndex int) {
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].Cpu)
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskBytes)
+	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskUtilization)
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].MemoryBytes)
 }
