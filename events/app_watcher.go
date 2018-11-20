@@ -2,7 +2,6 @@ package events
 
 import (
 	"fmt"
-	"log"
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -137,11 +136,12 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 	if int(index) < len(m.MetricsForInstance) {
 		instance := m.MetricsForInstance[index]
 
-		diskUtilization := float64(metric.GetDiskBytes()) / float64(metric.GetDiskBytesQuota()) * 100
+		cpuPercentage := int(metric.GetCpuPercentage())
+		diskUtilizationPercentage := int(float64(metric.GetDiskBytes()) / float64(metric.GetDiskBytesQuota()) * 100)
 
-		instance.Cpu.Set(metric.GetCpuPercentage())
+		instance.Cpu.Set(float64(cpuPercentage))
 		instance.DiskBytes.Set(float64(metric.GetDiskBytes()))
-		instance.DiskUtilization.Set(float64(int(diskUtilization)))
+		instance.DiskUtilization.Set(float64(diskUtilizationPercentage))
 		instance.MemoryBytes.Set(float64(metric.GetMemoryBytes()))
 	}
 }
