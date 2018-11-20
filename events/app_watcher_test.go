@@ -64,15 +64,9 @@ var _ = Describe("AppWatcher", func() {
 
 		registerer = &FakeRegistry{}
 		streamProvider = &mocks.FakeAppStreamProvider{}
-		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
+		appWatcher = events.NewAppWatcher(apps[0].Guid, apps[0].Instances, registerer, streamProvider)
 	})
 	AfterEach(func() {})
-
-	Describe("AppName", func() {
-		It("knows the name of its application", func() {
-			Expect(appWatcher.AppName()).To(Equal("foo"))
-		})
-	})
 
 	Describe("Run", func() {
 		It("Registers metrics on startup", func() {

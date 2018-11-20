@@ -3,12 +3,9 @@ package exporter
 import (
 	"log"
 	"net/url"
-
 	"time"
 
-	"github.com/alphagov/paas-prometheus-exporter/events"
 	"github.com/cloudfoundry-community/go-cfclient"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -17,48 +14,26 @@ type CFClient interface {
 	ListAppsByQuery(url.Values) ([]cfclient.App, error)
 }
 
-//go:generate counterfeiter -o mocks/watcher_manager.go . WatcherManager
-type WatcherManager interface {
-	CreateWatcher(cfclient.App, prometheus.Registerer) *events.AppWatcher
-	DeleteWatcher(appGuid string)
-}
-
-type ConcreteWatcherManager struct {
-	Config *cfclient.Config
-}
-
-func (wm *ConcreteWatcherManager) CreateWatcher(app cfclient.App, registry prometheus.Registerer) *events.AppWatcher {
-	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
-		Config: wm.Config,
-	}
-	return events.NewAppWatcher(app, registry, provider)
-}
-
-func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
-
-}
-
 type PaasExporter struct {
 	cf             CFClient
-	watchers       map[string]*events.AppWatcher
 	watcherManager WatcherManager
+	appNameByGuid  map[string]string
 }
 
-func New(cf CFClient, wc WatcherManager) *PaasExporter {
+func New(cf CFClient, wm WatcherManager) *PaasExporter {
 	return &PaasExporter{
 		cf:             cf,
-		watchers:       make(map[string]*events.AppWatcher),
-		watcherManager: wc,
+		watcherManager: wm,
+		appNameByGuid:  make(map[string]string),
 	}
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	appWatcher := e.watcherManager.CreateWatcher(app, prometheus.WrapRegistererWith(
+	e.appNameByGuid[app.Guid] = app.Name
+	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{"guid": app.Guid, "app": app.Name},
 		prometheus.DefaultRegisterer,
 	))
-
-	e.watchers[app.Guid] = appWatcher
 }
 
 func (e *PaasExporter) checkForNewApps() error {
@@ -70,19 +45,18 @@ func (e *PaasExporter) checkForNewApps() error {
 	running := map[string]bool{}
 
 	for _, app := range apps {
-		// Do we need to check they're running or does the API return all of them?
+		// TODO Do we need to check they're running or does the API return all of them?
 		// need to check app.State is "STARTED"
 		running[app.Guid] = true
 
-		appWatcher, present := e.watchers[app.Guid]
-		if present {
-			if appWatcher.AppName() != app.Name {
+		if _, ok := e.appNameByGuid[app.Guid]; ok {
+			if e.appNameByGuid[app.Guid] != app.Name {
 				// Name changed, stop and restart
-				appWatcher.Close()
+				e.watcherManager.DeleteWatcher(app.Guid)
 				e.createNewWatcher(app)
 			} else {
 				// notify watcher that instances may have changed
-				appWatcher.UpdateAppInstances(app.Instances)
+				e.watcherManager.UpdateAppInstances(app.Guid, app.Instances)
 			}
 		} else {
 			// new app
@@ -90,17 +64,12 @@ func (e *PaasExporter) checkForNewApps() error {
 		}
 	}
 
-	for appGuid, appWatcher := range e.watchers {
+	for appGuid, _ := range e.appNameByGuid {
 		if ok := running[appGuid]; !ok {
-			appWatcher.Close()
-			delete(e.watchers, appGuid)
+			e.watcherManager.DeleteWatcher(appGuid)
 		}
 	}
 	return nil
-}
-
-func (e *PaasExporter) WatcherCount() int {
-	return len(e.watchers)
 }
 
 func (e *PaasExporter) Start(updateFrequency time.Duration) {

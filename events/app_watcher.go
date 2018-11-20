@@ -3,15 +3,13 @@ package events
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-community/go-cfclient"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 type AppWatcher struct {
-	MetricsForInstance    []InstanceMetrics
-	appName               string
 	appGuid               string
+	MetricsForInstance    []InstanceMetrics
 	numberOfInstancesChan chan int
 	registerer            prometheus.Registerer
 	streamProvider        AppStreamProvider
@@ -25,8 +23,8 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 	im := InstanceMetrics{
 		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "Cpu",
-				Help: " ",
+				Name: "cpu",
+				Help: "CPU utilisation in percent (0-100)",
 				ConstLabels: prometheus.Labels{
 					"instance": fmt.Sprintf("%d", instanceIndex),
 				},
@@ -38,19 +36,19 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 }
 
 func NewAppWatcher(
-	app cfclient.App,
+	appGuid string,
+	appInstances int,
 	registerer prometheus.Registerer,
 	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
+		appGuid:               appGuid,
 		MetricsForInstance:    make([]InstanceMetrics, 0),
-		appName:               app.Name,
-		appGuid:               app.Guid,
-		registerer:            registerer,
 		numberOfInstancesChan: make(chan int, 5),
+		registerer:            registerer,
 		streamProvider:        streamProvider,
 	}
-	appWatcher.scaleTo(app.Instances)
+	appWatcher.scaleTo(appInstances)
 
 	// FIXME: what if the appWatcher errors? we currently ignore it
 	go appWatcher.Run()
@@ -59,8 +57,10 @@ func NewAppWatcher(
 
 func (m *AppWatcher) Run() error {
 	msgs, errs := m.streamProvider.OpenStreamFor(m.appGuid)
+	defer m.streamProvider.Close()
 
-	return m.mainLoop(msgs, errs)
+	err := m.mainLoop(msgs, errs)
+	return err
 }
 
 func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan error) error {
@@ -103,10 +103,6 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 		instance := m.MetricsForInstance[index]
 		instance.Cpu.Set(metric.GetCpuPercentage())
 	}
-}
-
-func (m *AppWatcher) AppName() string {
-	return m.appName
 }
 
 func (m *AppWatcher) UpdateAppInstances(newNumberOfInstances int) {

@@ -31,10 +31,10 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherManager.CreateWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 	})
 
-	FIt("deletes an AppWatcher when an app is deleted", func() {
+	It("deletes an AppWatcher when an app is deleted", func() {
 		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}, nil)
@@ -44,14 +44,43 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherManager.CreateWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 	})
 
-	XIt("deletes and recreates an AppWatcher when an app is renamed", func() {
+	It("deletes and recreates an AppWatcher when an app is renamed", func() {
+		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil)
+		fakeClient.ListAppsByQueryReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "bar", SpaceURL: "/v2/spaces/123"},
+		}, nil)
 
+		e := exporter.New(fakeClient, fakeWatcherManager)
+
+		go e.Start(100 * time.Millisecond)
+
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(2))
+		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 	})
-	XIt("updates an AppWatcher when an app changes size", func() {
 
+	It("updates an AppWatcher when an app changes size", func() {
+		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil)
+		fakeClient.ListAppsByQueryReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 2, Name: "foo", SpaceURL: "/v2/spaces/123"},
+		}, nil)
+
+		e := exporter.New(fakeClient, fakeWatcherManager)
+
+		go e.Start(100 * time.Millisecond)
+
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
+		Eventually(fakeWatcherManager.UpdateAppInstancesCallCount).Should(Equal(1))
+
+		guid, instances := fakeWatcherManager.UpdateAppInstancesArgsForCall(0)
+		Expect(guid).To(Equal("33333333-3333-3333-3333-333333333333"))
+		Expect(instances).To(Equal(2))
 	})
 })

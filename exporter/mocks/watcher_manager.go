@@ -4,93 +4,63 @@ package mocks
 import (
 	sync "sync"
 
-	events "github.com/alphagov/paas-prometheus-exporter/events"
 	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
 	prometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 type FakeWatcherManager struct {
-	CreateWatcherStub        func(cfclient.App, prometheus.Registerer) *events.AppWatcher
-	createWatcherMutex       sync.RWMutex
-	createWatcherArgsForCall []struct {
+	AddWatcherStub        func(cfclient.App, prometheus.Registerer)
+	addWatcherMutex       sync.RWMutex
+	addWatcherArgsForCall []struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
-	}
-	createWatcherReturns struct {
-		result1 *events.AppWatcher
-	}
-	createWatcherReturnsOnCall map[int]struct {
-		result1 *events.AppWatcher
 	}
 	DeleteWatcherStub        func(string)
 	deleteWatcherMutex       sync.RWMutex
 	deleteWatcherArgsForCall []struct {
 		arg1 string
 	}
+	UpdateAppInstancesStub        func(string, int)
+	updateAppInstancesMutex       sync.RWMutex
+	updateAppInstancesArgsForCall []struct {
+		arg1 string
+		arg2 int
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWatcherManager) CreateWatcher(arg1 cfclient.App, arg2 prometheus.Registerer) *events.AppWatcher {
-	fake.createWatcherMutex.Lock()
-	ret, specificReturn := fake.createWatcherReturnsOnCall[len(fake.createWatcherArgsForCall)]
-	fake.createWatcherArgsForCall = append(fake.createWatcherArgsForCall, struct {
+func (fake *FakeWatcherManager) AddWatcher(arg1 cfclient.App, arg2 prometheus.Registerer) {
+	fake.addWatcherMutex.Lock()
+	fake.addWatcherArgsForCall = append(fake.addWatcherArgsForCall, struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
 	}{arg1, arg2})
-	fake.recordInvocation("CreateWatcher", []interface{}{arg1, arg2})
-	fake.createWatcherMutex.Unlock()
-	if fake.CreateWatcherStub != nil {
-		return fake.CreateWatcherStub(arg1, arg2)
+	fake.recordInvocation("AddWatcher", []interface{}{arg1, arg2})
+	fake.addWatcherMutex.Unlock()
+	if fake.AddWatcherStub != nil {
+		fake.AddWatcherStub(arg1, arg2)
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	fakeReturns := fake.createWatcherReturns
-	return fakeReturns.result1
 }
 
-func (fake *FakeWatcherManager) CreateWatcherCallCount() int {
-	fake.createWatcherMutex.RLock()
-	defer fake.createWatcherMutex.RUnlock()
-	return len(fake.createWatcherArgsForCall)
+func (fake *FakeWatcherManager) AddWatcherCallCount() int {
+	fake.addWatcherMutex.RLock()
+	defer fake.addWatcherMutex.RUnlock()
+	return len(fake.addWatcherArgsForCall)
 }
 
-func (fake *FakeWatcherManager) CreateWatcherCalls(stub func(cfclient.App, prometheus.Registerer) *events.AppWatcher) {
-	fake.createWatcherMutex.Lock()
-	defer fake.createWatcherMutex.Unlock()
-	fake.CreateWatcherStub = stub
+func (fake *FakeWatcherManager) AddWatcherCalls(stub func(cfclient.App, prometheus.Registerer)) {
+	fake.addWatcherMutex.Lock()
+	defer fake.addWatcherMutex.Unlock()
+	fake.AddWatcherStub = stub
 }
 
-func (fake *FakeWatcherManager) CreateWatcherArgsForCall(i int) (cfclient.App, prometheus.Registerer) {
-	fake.createWatcherMutex.RLock()
-	defer fake.createWatcherMutex.RUnlock()
-	argsForCall := fake.createWatcherArgsForCall[i]
+func (fake *FakeWatcherManager) AddWatcherArgsForCall(i int) (cfclient.App, prometheus.Registerer) {
+	fake.addWatcherMutex.RLock()
+	defer fake.addWatcherMutex.RUnlock()
+	argsForCall := fake.addWatcherArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeWatcherManager) CreateWatcherReturns(result1 *events.AppWatcher) {
-	fake.createWatcherMutex.Lock()
-	defer fake.createWatcherMutex.Unlock()
-	fake.CreateWatcherStub = nil
-	fake.createWatcherReturns = struct {
-		result1 *events.AppWatcher
-	}{result1}
-}
-
-func (fake *FakeWatcherManager) CreateWatcherReturnsOnCall(i int, result1 *events.AppWatcher) {
-	fake.createWatcherMutex.Lock()
-	defer fake.createWatcherMutex.Unlock()
-	fake.CreateWatcherStub = nil
-	if fake.createWatcherReturnsOnCall == nil {
-		fake.createWatcherReturnsOnCall = make(map[int]struct {
-			result1 *events.AppWatcher
-		})
-	}
-	fake.createWatcherReturnsOnCall[i] = struct {
-		result1 *events.AppWatcher
-	}{result1}
 }
 
 func (fake *FakeWatcherManager) DeleteWatcher(arg1 string) {
@@ -124,13 +94,47 @@ func (fake *FakeWatcherManager) DeleteWatcherArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
+func (fake *FakeWatcherManager) UpdateAppInstances(arg1 string, arg2 int) {
+	fake.updateAppInstancesMutex.Lock()
+	fake.updateAppInstancesArgsForCall = append(fake.updateAppInstancesArgsForCall, struct {
+		arg1 string
+		arg2 int
+	}{arg1, arg2})
+	fake.recordInvocation("UpdateAppInstances", []interface{}{arg1, arg2})
+	fake.updateAppInstancesMutex.Unlock()
+	if fake.UpdateAppInstancesStub != nil {
+		fake.UpdateAppInstancesStub(arg1, arg2)
+	}
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstancesCallCount() int {
+	fake.updateAppInstancesMutex.RLock()
+	defer fake.updateAppInstancesMutex.RUnlock()
+	return len(fake.updateAppInstancesArgsForCall)
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstancesCalls(stub func(string, int)) {
+	fake.updateAppInstancesMutex.Lock()
+	defer fake.updateAppInstancesMutex.Unlock()
+	fake.UpdateAppInstancesStub = stub
+}
+
+func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) (string, int) {
+	fake.updateAppInstancesMutex.RLock()
+	defer fake.updateAppInstancesMutex.RUnlock()
+	argsForCall := fake.updateAppInstancesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
 func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.createWatcherMutex.RLock()
-	defer fake.createWatcherMutex.RUnlock()
+	fake.addWatcherMutex.RLock()
+	defer fake.addWatcherMutex.RUnlock()
 	fake.deleteWatcherMutex.RLock()
 	defer fake.deleteWatcherMutex.RUnlock()
+	fake.updateAppInstancesMutex.RLock()
+	defer fake.updateAppInstancesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
