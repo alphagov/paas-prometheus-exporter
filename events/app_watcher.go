@@ -16,8 +16,9 @@ type AppWatcher struct {
 }
 
 type InstanceMetrics struct {
-	Cpu       prometheus.Gauge
-	DiskBytes prometheus.Gauge
+	Cpu         prometheus.Gauge
+	DiskBytes   prometheus.Gauge
+	MemoryBytes prometheus.Gauge
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
@@ -40,10 +41,20 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 				},
 			},
 		),
+		MemoryBytes: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "diskBytes",
+				Help: "Memory usage in bytes",
+				ConstLabels: prometheus.Labels{
+					"instance": fmt.Sprintf("%d", instanceIndex),
+				},
+			},
+		),
 	}
 
 	registerer.MustRegister(im.Cpu)
 	registerer.MustRegister(im.DiskBytes)
+	registerer.MustRegister(im.MemoryBytes)
 	return im
 }
 
@@ -115,6 +126,7 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 		instance := m.MetricsForInstance[index]
 		instance.Cpu.Set(metric.GetCpuPercentage())
 		instance.DiskBytes.Set(float64(metric.GetDiskBytes()))
+		instance.MemoryBytes.Set(float64(metric.GetMemoryBytes()))
 	}
 }
 
@@ -144,4 +156,5 @@ func (m *AppWatcher) scaleTo(newInstanceCount int) {
 func (m *AppWatcher) unregisterInstanceMetrics(instanceIndex int) {
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].Cpu)
 	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskBytes)
+	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].MemoryBytes)
 }

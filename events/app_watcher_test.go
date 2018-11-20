@@ -51,7 +51,7 @@ func (m *FakeRegistry) UnregisterCallCount() int {
 }
 
 var _ = Describe("AppWatcher", func() {
-	const METRICS_PER_INSTANCE = 2
+	const METRICS_PER_INSTANCE = 3
 
 	var (
 		appWatcher     *events.AppWatcher
@@ -141,6 +141,25 @@ var _ = Describe("AppWatcher", func() {
 			diskBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
 
 			Eventually(func() float64 { return testutil.ToFloat64(diskBytesGauge) }).Should(Equal(float64(diskBytes)))
+		})
+
+		It("sets a memoryBytes metric on an instance", func() {
+			var memoryBytes uint64 = 2301
+			var instanceIndex int32 = 0
+			containerMetric := sonde_events.ContainerMetric{
+				DiskBytes:     &memoryBytes,
+				InstanceIndex: &instanceIndex,
+			}
+			messages := make(chan *sonde_events.Envelope, 1)
+			metricType := sonde_events.Envelope_ContainerMetric
+			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
+			streamProvider.OpenStreamForReturns(messages, nil)
+
+			defer appWatcher.Close()
+
+			memoryBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
+
+			Eventually(func() float64 { return testutil.ToFloat64(memoryBytesGauge) }).Should(Equal(float64(memoryBytes)))
 		})
 	})
 })
