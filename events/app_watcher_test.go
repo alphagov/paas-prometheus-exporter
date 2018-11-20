@@ -51,6 +51,8 @@ func (m *FakeRegistry) UnregisterCallCount() int {
 }
 
 var _ = Describe("AppWatcher", func() {
+	const METRICS_PER_INSTANCE = 2
+
 	var (
 		appWatcher     *events.AppWatcher
 		registerer     *FakeRegistry
@@ -70,42 +72,37 @@ var _ = Describe("AppWatcher", func() {
 
 	Describe("Run", func() {
 		It("Registers metrics on startup", func() {
-			// go appWatcher.Run()
-			// defer appWatcher.Close()
+			defer appWatcher.Close()
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
 		})
 
 		It("Unregisters metrics on close", func() {
-			go appWatcher.Run()
-
 			appWatcher.Close()
 
-			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
+			Eventually(registerer.UnregisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
 		})
 
 		It("Registers more metrics when new instances are created", func() {
-			go appWatcher.Run()
 			defer appWatcher.Close()
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(1))
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
 
 			appWatcher.UpdateAppInstances(2)
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
 		})
 
 		It("Unregisters some metrics when old instances are deleted", func() {
-			go appWatcher.Run()
 			defer appWatcher.Close()
 
 			appWatcher.UpdateAppInstances(2)
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(2))
+			Eventually(registerer.MustRegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
 
 			appWatcher.UpdateAppInstances(1)
 
-			Eventually(registerer.UnregisterCallCount).Should(Equal(1))
+			Eventually(registerer.UnregisterCallCount).Should(Equal(1 * METRICS_PER_INSTANCE))
 		})
 
 		It("sets a CPU metric on an instance", func() {
@@ -120,12 +117,30 @@ var _ = Describe("AppWatcher", func() {
 			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
 			streamProvider.OpenStreamForReturns(messages, nil)
 
-			go appWatcher.Run()
 			defer appWatcher.Close()
 
 			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
 
 			Eventually(func() float64 { return testutil.ToFloat64(cpuGauge) }).Should(Equal(cpuPercentage))
+		})
+
+		It("sets a diskBytes metric on an instance", func() {
+			var diskBytes uint64 = 2300
+			var instanceIndex int32 = 0
+			containerMetric := sonde_events.ContainerMetric{
+				DiskBytes:     &diskBytes,
+				InstanceIndex: &instanceIndex,
+			}
+			messages := make(chan *sonde_events.Envelope, 1)
+			metricType := sonde_events.Envelope_ContainerMetric
+			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
+			streamProvider.OpenStreamForReturns(messages, nil)
+
+			defer appWatcher.Close()
+
+			diskBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
+
+			Eventually(func() float64 { return testutil.ToFloat64(diskBytesGauge) }).Should(Equal(float64(diskBytes)))
 		})
 	})
 })
