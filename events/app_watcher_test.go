@@ -106,6 +106,8 @@ var _ = Describe("AppWatcher", func() {
 		})
 
 		It("sets container metrics for an instance", func() {
+			defer appWatcher.Close()
+
 			var instanceIndex int32 = 0
 
 			cpuPercentage := 10.0
@@ -128,8 +130,6 @@ var _ = Describe("AppWatcher", func() {
 			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
 			streamProvider.OpenStreamForReturns(messages, nil)
 
-			defer appWatcher.Close()
-
 			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
 			diskBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
 			diskUtilizationGauge := appWatcher.MetricsForInstance[instanceIndex].DiskUtilization
@@ -138,8 +138,12 @@ var _ = Describe("AppWatcher", func() {
 
 			Eventually(func() float64 { return testutil.ToFloat64(cpuGauge) }).Should(Equal(cpuPercentage))
 			Eventually(func() float64 { return testutil.ToFloat64(diskBytesGauge) }).Should(Equal(float64(diskBytes)))
-			Eventually(func() float64 { return testutil.ToFloat64(diskUtilizationGauge) }).Should(Equal(float64(50)))
 			Eventually(func() float64 { return testutil.ToFloat64(memoryBytesGauge) }).Should(Equal(float64(memoryBytes)))
+
+			// diskUtilization is a rounded percentage based on diskBytes/diskBytesQuota*100 (512/1024*100 = 50)
+			Eventually(func() float64 { return testutil.ToFloat64(diskUtilizationGauge) }).Should(Equal(float64(50)))
+
+			// diskUtilization is a rounded percentage based on memoryBytes/memoryBytesQuota*100 (1024/4096*100 = 25)
 			Eventually(func() float64 { return testutil.ToFloat64(memoryUtilizationGauge) }).Should(Equal(float64(25)))
 		})
 	})
