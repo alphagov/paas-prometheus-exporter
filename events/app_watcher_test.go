@@ -54,9 +54,10 @@ var _ = Describe("AppWatcher", func() {
 	const METRICS_PER_INSTANCE = 5
 
 	var (
-		appWatcher     *events.AppWatcher
-		registerer     *FakeRegistry
-		streamProvider *mocks.FakeAppStreamProvider
+		appWatcher     			 *events.AppWatcher
+		registerer     			 *FakeRegistry
+		streamProvider 			 *mocks.FakeAppStreamProvider
+		closeAppWatcherAfterTest bool
 	)
 
 	BeforeEach(func() {
@@ -67,25 +68,28 @@ var _ = Describe("AppWatcher", func() {
 		registerer = &FakeRegistry{}
 		streamProvider = &mocks.FakeAppStreamProvider{}
 		appWatcher = events.NewAppWatcher(apps[0].Guid, apps[0].Instances, registerer, streamProvider)
+		closeAppWatcherAfterTest = true
 	})
-	AfterEach(func() {})
+	AfterEach(func() {
+		if closeAppWatcherAfterTest {
+			appWatcher.Close()
+		}
+	})
 
 	Describe("Run", func() {
 		It("Registers metrics on startup", func() {
-			defer appWatcher.Close()
-
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 		})
 
 		It("Unregisters metrics on close", func() {
+			closeAppWatcherAfterTest = false
+
 			appWatcher.Close()
 
 			Eventually(registerer.UnregisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 		})
 
 		It("Registers more metrics when new instances are created", func() {
-			defer appWatcher.Close()
-
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 
 			appWatcher.UpdateAppInstances(2)
@@ -94,8 +98,6 @@ var _ = Describe("AppWatcher", func() {
 		})
 
 		It("Unregisters some metrics when old instances are deleted", func() {
-			defer appWatcher.Close()
-
 			appWatcher.UpdateAppInstances(2)
 
 			Eventually(registerer.MustRegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
@@ -106,8 +108,6 @@ var _ = Describe("AppWatcher", func() {
 		})
 
 		It("sets container metrics for an instance", func() {
-			defer appWatcher.Close()
-
 			var instanceIndex int32 = 0
 
 			cpuPercentage := 10.0
