@@ -2,45 +2,94 @@
 package mocks
 
 import (
-	sync "sync"
+	"sync"
 
-	events "github.com/alphagov/paas-prometheus-exporter/events"
-	eventsa "github.com/cloudfoundry/sonde-go/events"
+	"github.com/alphagov/paas-prometheus-exporter/events"
+	sonde_events "github.com/cloudfoundry/sonde-go/events"
 )
 
 type FakeAppStreamProvider struct {
+	OpenStreamForStub        func(appGuid string) (<-chan *sonde_events.Envelope, <-chan error)
+	openStreamForMutex       sync.RWMutex
+	openStreamForArgsForCall []struct {
+		appGuid string
+	}
+	openStreamForReturns struct {
+		result1 <-chan *sonde_events.Envelope
+		result2 <-chan error
+	}
+	openStreamForReturnsOnCall map[int]struct {
+		result1 <-chan *sonde_events.Envelope
+		result2 <-chan error
+	}
 	CloseStub        func() error
 	closeMutex       sync.RWMutex
-	closeArgsForCall []struct {
-	}
-	closeReturns struct {
+	closeArgsForCall []struct{}
+	closeReturns     struct {
 		result1 error
 	}
 	closeReturnsOnCall map[int]struct {
 		result1 error
 	}
-	OpenStreamForStub        func(string) (<-chan *eventsa.Envelope, <-chan error)
-	openStreamForMutex       sync.RWMutex
-	openStreamForArgsForCall []struct {
-		arg1 string
-	}
-	openStreamForReturns struct {
-		result1 <-chan *eventsa.Envelope
-		result2 <-chan error
-	}
-	openStreamForReturnsOnCall map[int]struct {
-		result1 <-chan *eventsa.Envelope
-		result2 <-chan error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeAppStreamProvider) OpenStreamFor(appGuid string) (<-chan *sonde_events.Envelope, <-chan error) {
+	fake.openStreamForMutex.Lock()
+	ret, specificReturn := fake.openStreamForReturnsOnCall[len(fake.openStreamForArgsForCall)]
+	fake.openStreamForArgsForCall = append(fake.openStreamForArgsForCall, struct {
+		appGuid string
+	}{appGuid})
+	fake.recordInvocation("OpenStreamFor", []interface{}{appGuid})
+	fake.openStreamForMutex.Unlock()
+	if fake.OpenStreamForStub != nil {
+		return fake.OpenStreamForStub(appGuid)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.openStreamForReturns.result1, fake.openStreamForReturns.result2
+}
+
+func (fake *FakeAppStreamProvider) OpenStreamForCallCount() int {
+	fake.openStreamForMutex.RLock()
+	defer fake.openStreamForMutex.RUnlock()
+	return len(fake.openStreamForArgsForCall)
+}
+
+func (fake *FakeAppStreamProvider) OpenStreamForArgsForCall(i int) string {
+	fake.openStreamForMutex.RLock()
+	defer fake.openStreamForMutex.RUnlock()
+	return fake.openStreamForArgsForCall[i].appGuid
+}
+
+func (fake *FakeAppStreamProvider) OpenStreamForReturns(result1 <-chan *sonde_events.Envelope, result2 <-chan error) {
+	fake.OpenStreamForStub = nil
+	fake.openStreamForReturns = struct {
+		result1 <-chan *sonde_events.Envelope
+		result2 <-chan error
+	}{result1, result2}
+}
+
+func (fake *FakeAppStreamProvider) OpenStreamForReturnsOnCall(i int, result1 <-chan *sonde_events.Envelope, result2 <-chan error) {
+	fake.OpenStreamForStub = nil
+	if fake.openStreamForReturnsOnCall == nil {
+		fake.openStreamForReturnsOnCall = make(map[int]struct {
+			result1 <-chan *sonde_events.Envelope
+			result2 <-chan error
+		})
+	}
+	fake.openStreamForReturnsOnCall[i] = struct {
+		result1 <-chan *sonde_events.Envelope
+		result2 <-chan error
+	}{result1, result2}
 }
 
 func (fake *FakeAppStreamProvider) Close() error {
 	fake.closeMutex.Lock()
 	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
-	fake.closeArgsForCall = append(fake.closeArgsForCall, struct {
-	}{})
+	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
 	fake.recordInvocation("Close", []interface{}{})
 	fake.closeMutex.Unlock()
 	if fake.CloseStub != nil {
@@ -49,8 +98,7 @@ func (fake *FakeAppStreamProvider) Close() error {
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.closeReturns
-	return fakeReturns.result1
+	return fake.closeReturns.result1
 }
 
 func (fake *FakeAppStreamProvider) CloseCallCount() int {
@@ -59,15 +107,7 @@ func (fake *FakeAppStreamProvider) CloseCallCount() int {
 	return len(fake.closeArgsForCall)
 }
 
-func (fake *FakeAppStreamProvider) CloseCalls(stub func() error) {
-	fake.closeMutex.Lock()
-	defer fake.closeMutex.Unlock()
-	fake.CloseStub = stub
-}
-
 func (fake *FakeAppStreamProvider) CloseReturns(result1 error) {
-	fake.closeMutex.Lock()
-	defer fake.closeMutex.Unlock()
 	fake.CloseStub = nil
 	fake.closeReturns = struct {
 		result1 error
@@ -75,8 +115,6 @@ func (fake *FakeAppStreamProvider) CloseReturns(result1 error) {
 }
 
 func (fake *FakeAppStreamProvider) CloseReturnsOnCall(i int, result1 error) {
-	fake.closeMutex.Lock()
-	defer fake.closeMutex.Unlock()
 	fake.CloseStub = nil
 	if fake.closeReturnsOnCall == nil {
 		fake.closeReturnsOnCall = make(map[int]struct {
@@ -88,76 +126,13 @@ func (fake *FakeAppStreamProvider) CloseReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeAppStreamProvider) OpenStreamFor(arg1 string) (<-chan *eventsa.Envelope, <-chan error) {
-	fake.openStreamForMutex.Lock()
-	ret, specificReturn := fake.openStreamForReturnsOnCall[len(fake.openStreamForArgsForCall)]
-	fake.openStreamForArgsForCall = append(fake.openStreamForArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("OpenStreamFor", []interface{}{arg1})
-	fake.openStreamForMutex.Unlock()
-	if fake.OpenStreamForStub != nil {
-		return fake.OpenStreamForStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.openStreamForReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeAppStreamProvider) OpenStreamForCallCount() int {
-	fake.openStreamForMutex.RLock()
-	defer fake.openStreamForMutex.RUnlock()
-	return len(fake.openStreamForArgsForCall)
-}
-
-func (fake *FakeAppStreamProvider) OpenStreamForCalls(stub func(string) (<-chan *eventsa.Envelope, <-chan error)) {
-	fake.openStreamForMutex.Lock()
-	defer fake.openStreamForMutex.Unlock()
-	fake.OpenStreamForStub = stub
-}
-
-func (fake *FakeAppStreamProvider) OpenStreamForArgsForCall(i int) string {
-	fake.openStreamForMutex.RLock()
-	defer fake.openStreamForMutex.RUnlock()
-	argsForCall := fake.openStreamForArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeAppStreamProvider) OpenStreamForReturns(result1 <-chan *eventsa.Envelope, result2 <-chan error) {
-	fake.openStreamForMutex.Lock()
-	defer fake.openStreamForMutex.Unlock()
-	fake.OpenStreamForStub = nil
-	fake.openStreamForReturns = struct {
-		result1 <-chan *eventsa.Envelope
-		result2 <-chan error
-	}{result1, result2}
-}
-
-func (fake *FakeAppStreamProvider) OpenStreamForReturnsOnCall(i int, result1 <-chan *eventsa.Envelope, result2 <-chan error) {
-	fake.openStreamForMutex.Lock()
-	defer fake.openStreamForMutex.Unlock()
-	fake.OpenStreamForStub = nil
-	if fake.openStreamForReturnsOnCall == nil {
-		fake.openStreamForReturnsOnCall = make(map[int]struct {
-			result1 <-chan *eventsa.Envelope
-			result2 <-chan error
-		})
-	}
-	fake.openStreamForReturnsOnCall[i] = struct {
-		result1 <-chan *eventsa.Envelope
-		result2 <-chan error
-	}{result1, result2}
-}
-
 func (fake *FakeAppStreamProvider) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
 	fake.openStreamForMutex.RLock()
 	defer fake.openStreamForMutex.RUnlock()
+	fake.closeMutex.RLock()
+	defer fake.closeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

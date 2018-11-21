@@ -110,8 +110,8 @@ var _ = Describe("CheckForNewApps", func() {
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 		Eventually(fakeWatcherManager.UpdateAppInstancesCallCount).Should(Equal(1))
 
-		guid, instances := fakeWatcherManager.UpdateAppInstancesArgsForCall(0)
-		Expect(guid).To(Equal("33333333-3333-3333-3333-333333333333"))
-		Expect(instances).To(Equal(2))
+		app := fakeWatcherManager.UpdateAppInstancesArgsForCall(0)
+		Expect(app.Guid).To(Equal("33333333-3333-3333-3333-333333333333"))
+		Expect(app.Instances).To(Equal(2))
 	})
 })

@@ -2,11 +2,11 @@
 package mocks
 
 import (
-	sync "sync"
+	"sync"
 
-	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
+	"github.com/alphagov/paas-prometheus-exporter/exporter"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
-	prometheus "github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type FakeWatcherManager struct {
@@ -16,16 +16,15 @@ type FakeWatcherManager struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
 	}
-	DeleteWatcherStub        func(string)
+	DeleteWatcherStub        func(appGuid string)
 	deleteWatcherMutex       sync.RWMutex
 	deleteWatcherArgsForCall []struct {
-		arg1 string
+		appGuid string
 	}
-	UpdateAppInstancesStub        func(string, int)
+	UpdateAppInstancesStub        func(cfclient.App)
 	updateAppInstancesMutex       sync.RWMutex
 	updateAppInstancesArgsForCall []struct {
-		arg1 string
-		arg2 int
+		arg1 cfclient.App
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -50,28 +49,21 @@ func (fake *FakeWatcherManager) AddWatcherCallCount() int {
 	return len(fake.addWatcherArgsForCall)
 }
 
-func (fake *FakeWatcherManager) AddWatcherCalls(stub func(cfclient.App, prometheus.Registerer)) {
-	fake.addWatcherMutex.Lock()
-	defer fake.addWatcherMutex.Unlock()
-	fake.AddWatcherStub = stub
-}
-
 func (fake *FakeWatcherManager) AddWatcherArgsForCall(i int) (cfclient.App, prometheus.Registerer) {
 	fake.addWatcherMutex.RLock()
 	defer fake.addWatcherMutex.RUnlock()
-	argsForCall := fake.addWatcherArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return fake.addWatcherArgsForCall[i].arg1, fake.addWatcherArgsForCall[i].arg2
 }
 
-func (fake *FakeWatcherManager) DeleteWatcher(arg1 string) {
+func (fake *FakeWatcherManager) DeleteWatcher(appGuid string) {
 	fake.deleteWatcherMutex.Lock()
 	fake.deleteWatcherArgsForCall = append(fake.deleteWatcherArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	fake.recordInvocation("DeleteWatcher", []interface{}{arg1})
+		appGuid string
+	}{appGuid})
+	fake.recordInvocation("DeleteWatcher", []interface{}{appGuid})
 	fake.deleteWatcherMutex.Unlock()
 	if fake.DeleteWatcherStub != nil {
-		fake.DeleteWatcherStub(arg1)
+		fake.DeleteWatcherStub(appGuid)
 	}
 }
 
@@ -81,29 +73,21 @@ func (fake *FakeWatcherManager) DeleteWatcherCallCount() int {
 	return len(fake.deleteWatcherArgsForCall)
 }
 
-func (fake *FakeWatcherManager) DeleteWatcherCalls(stub func(string)) {
-	fake.deleteWatcherMutex.Lock()
-	defer fake.deleteWatcherMutex.Unlock()
-	fake.DeleteWatcherStub = stub
-}
-
 func (fake *FakeWatcherManager) DeleteWatcherArgsForCall(i int) string {
 	fake.deleteWatcherMutex.RLock()
 	defer fake.deleteWatcherMutex.RUnlock()
-	argsForCall := fake.deleteWatcherArgsForCall[i]
-	return argsForCall.arg1
+	return fake.deleteWatcherArgsForCall[i].appGuid
 }
 
-func (fake *FakeWatcherManager) UpdateAppInstances(arg1 string, arg2 int) {
+func (fake *FakeWatcherManager) UpdateAppInstances(arg1 cfclient.App) {
 	fake.updateAppInstancesMutex.Lock()
 	fake.updateAppInstancesArgsForCall = append(fake.updateAppInstancesArgsForCall, struct {
-		arg1 string
-		arg2 int
-	}{arg1, arg2})
-	fake.recordInvocation("UpdateAppInstances", []interface{}{arg1, arg2})
+		arg1 cfclient.App
+	}{arg1})
+	fake.recordInvocation("UpdateAppInstances", []interface{}{arg1})
 	fake.updateAppInstancesMutex.Unlock()
 	if fake.UpdateAppInstancesStub != nil {
-		fake.UpdateAppInstancesStub(arg1, arg2)
+		fake.UpdateAppInstancesStub(arg1)
 	}
 }
 
@@ -113,17 +97,10 @@ func (fake *FakeWatcherManager) UpdateAppInstancesCallCount() int {
 	return len(fake.updateAppInstancesArgsForCall)
 }
 
-func (fake *FakeWatcherManager) UpdateAppInstancesCalls(stub func(string, int)) {
-	fake.updateAppInstancesMutex.Lock()
-	defer fake.updateAppInstancesMutex.Unlock()
-	fake.UpdateAppInstancesStub = stub
-}
-
-func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) (string, int) {
+func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) cfclient.App {
 	fake.updateAppInstancesMutex.RLock()
 	defer fake.updateAppInstancesMutex.RUnlock()
-	argsForCall := fake.updateAppInstancesArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return fake.updateAppInstancesArgsForCall[i].arg1
 }
 
 func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {

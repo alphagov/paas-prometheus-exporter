@@ -55,7 +55,7 @@ func (e *PaasExporter) checkForNewApps() error {
 					e.createNewWatcher(app)
 				} else {
 					// notify watcher that instances may have changed
-					e.watcherManager.UpdateAppInstances(app.Guid, app.Instances)
+					e.watcherManager.UpdateAppInstances(app)
 				}
 			} else {
 				// new app

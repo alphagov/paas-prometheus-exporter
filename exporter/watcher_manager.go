@@ -11,7 +11,7 @@ import (
 type WatcherManager interface {
 	AddWatcher(cfclient.App, prometheus.Registerer)
 	DeleteWatcher(appGuid string)
-	UpdateAppInstances(appGuid string, instances int)
+	UpdateAppInstances(cfclient.App)
 }
 
 type ConcreteWatcherManager struct {
@@ -38,6 +38,6 @@ func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {
 	delete(wm.watchers, appGuid)
 }
 
-func (wm *ConcreteWatcherManager) UpdateAppInstances(appGuid string, instances int) {
-	wm.watchers[appGuid].UpdateAppInstances(instances)
+func (wm *ConcreteWatcherManager) UpdateAppInstances(app cfclient.App) {
+	wm.watchers[app.Guid].UpdateAppInstances(app.Instances)
 }
