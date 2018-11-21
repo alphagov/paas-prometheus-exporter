@@ -34,7 +34,7 @@ var _ = Describe("CheckForNewApps", func() {
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 	})
 
-	It("does not create a new appWatcher if the app is state is stopped", func() {
+	It("does not create a new appWatcher if the app state is stopped", func() {
 		fakeClient.ListAppsByQueryReturns([]cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
 		}, nil)

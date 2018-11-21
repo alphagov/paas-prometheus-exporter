@@ -5,6 +5,7 @@ import (
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/cloudfoundry-community/go-cfclient"
 )
 
 type AppWatcher struct {
@@ -90,19 +91,18 @@ func (im *InstanceMetrics) unregisterInstanceMetrics() {
 }
 
 func NewAppWatcher(
-	appGuid string,
-	appInstances int,
+	app cfclient.App,
 	registerer prometheus.Registerer,
 	streamProvider AppStreamProvider,
 ) *AppWatcher {
 	appWatcher := &AppWatcher{
-		appGuid:               appGuid,
+		appGuid:               app.Guid,
 		MetricsForInstance:    make([]InstanceMetrics, 0),
 		numberOfInstancesChan: make(chan int, 5),
 		registerer:            registerer,
 		streamProvider:        streamProvider,
 	}
-	appWatcher.scaleTo(appInstances)
+	appWatcher.scaleTo(app.Instances)
 
 	// FIXME: what if the appWatcher errors? we currently ignore it
 	go appWatcher.Run()
