@@ -54,9 +54,9 @@ var _ = Describe("AppWatcher", func() {
 	const METRICS_PER_INSTANCE = 5
 
 	var (
-		appWatcher     			 *events.AppWatcher
-		registerer     			 *FakeRegistry
-		streamProvider 			 *mocks.FakeAppStreamProvider
+		appWatcher     	         *events.AppWatcher
+		registerer     	         *FakeRegistry
+		streamProvider 	         *mocks.FakeAppStreamProvider
 		closeAppWatcherAfterTest bool
 	)
 
@@ -140,10 +140,10 @@ var _ = Describe("AppWatcher", func() {
 			Eventually(func() float64 { return testutil.ToFloat64(diskBytesGauge) }).Should(Equal(float64(diskBytes)))
 			Eventually(func() float64 { return testutil.ToFloat64(memoryBytesGauge) }).Should(Equal(float64(memoryBytes)))
 
-			// diskUtilization is a rounded percentage based on diskBytes/diskBytesQuota*100 (512/1024*100 = 50)
+			// diskUtilization is a percentage based on diskBytes/diskBytesQuota*100 (512/1024*100 = 50)
 			Eventually(func() float64 { return testutil.ToFloat64(diskUtilizationGauge) }).Should(Equal(float64(50)))
 
-			// diskUtilization is a rounded percentage based on memoryBytes/memoryBytesQuota*100 (1024/4096*100 = 25)
+			// diskUtilization is a percentage based on memoryBytes/memoryBytesQuota*100 (1024/4096*100 = 25)
 			Eventually(func() float64 { return testutil.ToFloat64(memoryUtilizationGauge) }).Should(Equal(float64(25)))
 		})
 	})

@@ -141,15 +141,14 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 	if int(index) < len(m.MetricsForInstance) {
 		instance := m.MetricsForInstance[index]
 
-		cpuPercentage := int(metric.GetCpuPercentage())
-		diskUtilizationPercentage := int(float64(metric.GetDiskBytes()) / float64(metric.GetDiskBytesQuota()) * 100)
-		memoryUtilizationPercentage := int(float64(metric.GetMemoryBytes()) / float64(metric.GetMemoryBytesQuota()) * 100)
+		diskUtilizationPercentage := float64(metric.GetDiskBytes()) / float64(metric.GetDiskBytesQuota()) * 100
+		memoryUtilizationPercentage := float64(metric.GetMemoryBytes()) / float64(metric.GetMemoryBytesQuota()) * 100
 
-		instance.Cpu.Set(float64(cpuPercentage))
+		instance.Cpu.Set(metric.GetCpuPercentage())
 		instance.DiskBytes.Set(float64(metric.GetDiskBytes()))
-		instance.DiskUtilization.Set(float64(diskUtilizationPercentage))
+		instance.DiskUtilization.Set(diskUtilizationPercentage)
 		instance.MemoryBytes.Set(float64(metric.GetMemoryBytes()))
-		instance.MemoryUtilization.Set(float64(memoryUtilizationPercentage))
+		instance.MemoryUtilization.Set(memoryUtilizationPercentage)
 	}
 }
 
