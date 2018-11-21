@@ -16,6 +16,7 @@ type AppWatcher struct {
 }
 
 type InstanceMetrics struct {
+	Registerer        prometheus.Registerer
 	Cpu               prometheus.Gauge
 	DiskBytes         prometheus.Gauge
 	DiskUtilization   prometheus.Gauge
@@ -29,6 +30,7 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 	}
 
 	im := InstanceMetrics{
+		Registerer: registerer,
 		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Name: "cpu",
@@ -66,12 +68,25 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 		),
 	}
 
-	registerer.MustRegister(im.Cpu)
-	registerer.MustRegister(im.DiskBytes)
-	registerer.MustRegister(im.DiskUtilization)
-	registerer.MustRegister(im.MemoryBytes)
-	registerer.MustRegister(im.MemoryUtilization)
+	im.registerInstanceMetrics()
+
 	return im
+}
+
+func (im *InstanceMetrics) registerInstanceMetrics() {
+	im.Registerer.MustRegister(im.Cpu)
+	im.Registerer.MustRegister(im.DiskBytes)
+	im.Registerer.MustRegister(im.DiskUtilization)
+	im.Registerer.MustRegister(im.MemoryBytes)
+	im.Registerer.MustRegister(im.MemoryUtilization)
+}
+
+func (im *InstanceMetrics) unregisterInstanceMetrics() {
+	im.Registerer.Unregister(im.Cpu)
+	im.Registerer.Unregister(im.DiskBytes)
+	im.Registerer.Unregister(im.DiskUtilization)
+	im.Registerer.Unregister(im.MemoryBytes)
+	im.Registerer.Unregister(im.MemoryUtilization)
 }
 
 func NewAppWatcher(
@@ -169,16 +184,8 @@ func (m *AppWatcher) scaleTo(newInstanceCount int) {
 		}
 	} else {
 		for i := currentInstanceCount; i > newInstanceCount; i-- {
-			m.unregisterInstanceMetrics(i - 1)
+			m.MetricsForInstance[i - 1].unregisterInstanceMetrics()
 		}
 		m.MetricsForInstance = m.MetricsForInstance[0:newInstanceCount]
 	}
-}
-
-func (m *AppWatcher) unregisterInstanceMetrics(instanceIndex int) {
-	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].Cpu)
-	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskBytes)
-	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].DiskUtilization)
-	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].MemoryBytes)
-	m.registerer.Unregister(m.MetricsForInstance[instanceIndex].MemoryUtilization)
 }
