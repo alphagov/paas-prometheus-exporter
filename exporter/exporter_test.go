@@ -31,7 +31,9 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
+		// Assert addWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
 	})
 
 	It("does not create a new appWatcher if the app state is stopped", func() {
@@ -43,7 +45,8 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(0))
+		// Assert addWatcher is not called including in subsequent runs of `checkForNewApps`
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(0))
 	})
 
 	It("creates a new appWatcher if a stopped app is started", func() {
@@ -58,6 +61,7 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
+		// Assert addWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
 	})
@@ -72,8 +76,13 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
+		// Assert addWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
+
+		// Assert deleteWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.DeleteWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
 	})
 
 	It("deletes an AppWatcher when an app is stopped", func() {
@@ -88,10 +97,12 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
+		// Assert addWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
-		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
 
-		// Check that we don't try and delete it a second time in the next run of `checkForNewApps`
+		// Assert deleteWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
+		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
 		Consistently(fakeWatcherManager.DeleteWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
 	})
 
@@ -107,8 +118,13 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
+		// Assert addWatcher is called twice and only twice for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(2))
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(2))
+
+		// Assert deleteWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
 		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.DeleteWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
 	})
 
 	It("updates an AppWatcher when an app changes size", func() {
@@ -123,7 +139,6 @@ var _ = Describe("CheckForNewApps", func() {
 
 		go e.Start(100 * time.Millisecond)
 
-		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(1))
 		Eventually(fakeWatcherManager.UpdateAppInstancesCallCount).Should(Equal(1))
 
 		app := fakeWatcherManager.UpdateAppInstancesArgsForCall(0)
