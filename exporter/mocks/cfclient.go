@@ -2,10 +2,10 @@
 package mocks
 
 import (
-	"net/url"
-	"sync"
+	url "net/url"
+	sync "sync"
 
-	"github.com/alphagov/paas-prometheus-exporter/exporter"
+	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
 )
 
@@ -41,7 +41,8 @@ func (fake *FakeCFClient) ListAppsByQuery(arg1 url.Values) ([]cfclient.App, erro
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.listAppsByQueryReturns.result1, fake.listAppsByQueryReturns.result2
+	fakeReturns := fake.listAppsByQueryReturns
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeCFClient) ListAppsByQueryCallCount() int {
@@ -50,13 +51,22 @@ func (fake *FakeCFClient) ListAppsByQueryCallCount() int {
 	return len(fake.listAppsByQueryArgsForCall)
 }
 
+func (fake *FakeCFClient) ListAppsByQueryCalls(stub func(url.Values) ([]cfclient.App, error)) {
+	fake.listAppsByQueryMutex.Lock()
+	defer fake.listAppsByQueryMutex.Unlock()
+	fake.ListAppsByQueryStub = stub
+}
+
 func (fake *FakeCFClient) ListAppsByQueryArgsForCall(i int) url.Values {
 	fake.listAppsByQueryMutex.RLock()
 	defer fake.listAppsByQueryMutex.RUnlock()
-	return fake.listAppsByQueryArgsForCall[i].arg1
+	argsForCall := fake.listAppsByQueryArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeCFClient) ListAppsByQueryReturns(result1 []cfclient.App, result2 error) {
+	fake.listAppsByQueryMutex.Lock()
+	defer fake.listAppsByQueryMutex.Unlock()
 	fake.ListAppsByQueryStub = nil
 	fake.listAppsByQueryReturns = struct {
 		result1 []cfclient.App
@@ -65,6 +75,8 @@ func (fake *FakeCFClient) ListAppsByQueryReturns(result1 []cfclient.App, result2
 }
 
 func (fake *FakeCFClient) ListAppsByQueryReturnsOnCall(i int, result1 []cfclient.App, result2 error) {
+	fake.listAppsByQueryMutex.Lock()
+	defer fake.listAppsByQueryMutex.Unlock()
 	fake.ListAppsByQueryStub = nil
 	if fake.listAppsByQueryReturnsOnCall == nil {
 		fake.listAppsByQueryReturnsOnCall = make(map[int]struct {

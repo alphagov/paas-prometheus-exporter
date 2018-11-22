@@ -36,6 +36,11 @@ func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 	))
 }
 
+func (e *PaasExporter) deleteWatcher(appGuid string) {
+	e.watcherManager.DeleteWatcher(appGuid)
+	delete(e.appNameByGuid, appGuid)
+}
+
 func (e *PaasExporter) checkForNewApps() error {
 	apps, err := e.cf.ListAppsByQuery(url.Values{})
 	if err != nil {
@@ -51,7 +56,7 @@ func (e *PaasExporter) checkForNewApps() error {
 			if _, ok := e.appNameByGuid[app.Guid]; ok {
 				if e.appNameByGuid[app.Guid] != app.Name {
 					// Name changed, stop and restart
-					e.watcherManager.DeleteWatcher(app.Guid)
+					e.deleteWatcher(app.Guid)
 					e.createNewWatcher(app)
 				} else {
 					// notify watcher that instances may have changed
@@ -66,8 +71,7 @@ func (e *PaasExporter) checkForNewApps() error {
 
 	for appGuid, _ := range e.appNameByGuid {
 		if ok := running[appGuid]; !ok {
-			e.watcherManager.DeleteWatcher(appGuid)
-			delete(e.appNameByGuid, appGuid)
+			e.deleteWatcher(appGuid)
 		}
 	}
 	return nil

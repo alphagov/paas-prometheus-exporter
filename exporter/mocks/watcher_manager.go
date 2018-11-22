@@ -2,11 +2,11 @@
 package mocks
 
 import (
-	"sync"
+	sync "sync"
 
-	"github.com/alphagov/paas-prometheus-exporter/exporter"
+	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
-	"github.com/prometheus/client_golang/prometheus"
+	prometheus "github.com/prometheus/client_golang/prometheus"
 )
 
 type FakeWatcherManager struct {
@@ -16,10 +16,10 @@ type FakeWatcherManager struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
 	}
-	DeleteWatcherStub        func(appGuid string)
+	DeleteWatcherStub        func(string)
 	deleteWatcherMutex       sync.RWMutex
 	deleteWatcherArgsForCall []struct {
-		appGuid string
+		arg1 string
 	}
 	UpdateAppInstancesStub        func(cfclient.App)
 	updateAppInstancesMutex       sync.RWMutex
@@ -49,21 +49,28 @@ func (fake *FakeWatcherManager) AddWatcherCallCount() int {
 	return len(fake.addWatcherArgsForCall)
 }
 
+func (fake *FakeWatcherManager) AddWatcherCalls(stub func(cfclient.App, prometheus.Registerer)) {
+	fake.addWatcherMutex.Lock()
+	defer fake.addWatcherMutex.Unlock()
+	fake.AddWatcherStub = stub
+}
+
 func (fake *FakeWatcherManager) AddWatcherArgsForCall(i int) (cfclient.App, prometheus.Registerer) {
 	fake.addWatcherMutex.RLock()
 	defer fake.addWatcherMutex.RUnlock()
-	return fake.addWatcherArgsForCall[i].arg1, fake.addWatcherArgsForCall[i].arg2
+	argsForCall := fake.addWatcherArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeWatcherManager) DeleteWatcher(appGuid string) {
+func (fake *FakeWatcherManager) DeleteWatcher(arg1 string) {
 	fake.deleteWatcherMutex.Lock()
 	fake.deleteWatcherArgsForCall = append(fake.deleteWatcherArgsForCall, struct {
-		appGuid string
-	}{appGuid})
-	fake.recordInvocation("DeleteWatcher", []interface{}{appGuid})
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("DeleteWatcher", []interface{}{arg1})
 	fake.deleteWatcherMutex.Unlock()
 	if fake.DeleteWatcherStub != nil {
-		fake.DeleteWatcherStub(appGuid)
+		fake.DeleteWatcherStub(arg1)
 	}
 }
 
@@ -73,10 +80,17 @@ func (fake *FakeWatcherManager) DeleteWatcherCallCount() int {
 	return len(fake.deleteWatcherArgsForCall)
 }
 
+func (fake *FakeWatcherManager) DeleteWatcherCalls(stub func(string)) {
+	fake.deleteWatcherMutex.Lock()
+	defer fake.deleteWatcherMutex.Unlock()
+	fake.DeleteWatcherStub = stub
+}
+
 func (fake *FakeWatcherManager) DeleteWatcherArgsForCall(i int) string {
 	fake.deleteWatcherMutex.RLock()
 	defer fake.deleteWatcherMutex.RUnlock()
-	return fake.deleteWatcherArgsForCall[i].appGuid
+	argsForCall := fake.deleteWatcherArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeWatcherManager) UpdateAppInstances(arg1 cfclient.App) {
@@ -97,10 +111,17 @@ func (fake *FakeWatcherManager) UpdateAppInstancesCallCount() int {
 	return len(fake.updateAppInstancesArgsForCall)
 }
 
+func (fake *FakeWatcherManager) UpdateAppInstancesCalls(stub func(cfclient.App)) {
+	fake.updateAppInstancesMutex.Lock()
+	defer fake.updateAppInstancesMutex.Unlock()
+	fake.UpdateAppInstancesStub = stub
+}
+
 func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) cfclient.App {
 	fake.updateAppInstancesMutex.RLock()
 	defer fake.updateAppInstancesMutex.RUnlock()
-	return fake.updateAppInstancesArgsForCall[i].arg1
+	argsForCall := fake.updateAppInstancesArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {
