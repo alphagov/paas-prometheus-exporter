@@ -41,29 +41,29 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 		),
 		DiskBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "diskBytes",
+				Name: "disk_bytes",
 				Help: "Disk usage in bytes",
 				ConstLabels: constLabels,
 			},
 		),
 		DiskUtilization: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "diskUtilization",
-				Help: "Disk utilisation in percent (0-100)",
+				Name: "disk_utilization",
+				Help: "Disk space currently in use in percent (0-100)",
 				ConstLabels: constLabels,
 			},
 		),
 		MemoryBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "memoryBytes",
+				Name: "memory_bytes",
 				Help: "Memory usage in bytes",
 				ConstLabels: constLabels,
 			},
 		),
 		MemoryUtilization: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "memoryUtilization",
-				Help: "Memory utilisation in percent (0-100)",
+				Name: "memory_utilization",
+				Help: "Memory currently in use in percent (0-100)",
 				ConstLabels: constLabels,
 			},
 		),
