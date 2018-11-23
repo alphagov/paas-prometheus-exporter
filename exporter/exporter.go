@@ -2,7 +2,6 @@ package exporter
 
 import (
 	"log"
-	"net/url"
 	"time"
 
 	"github.com/cloudfoundry-community/go-cfclient"
@@ -11,38 +10,63 @@ import (
 
 //go:generate counterfeiter -o mocks/cfclient.go . CFClient
 type CFClient interface {
-	ListAppsByQuery(url.Values) ([]cfclient.App, error)
+	ListAppsWithSpaceAndOrg() ([]cfclient.App, error)
+}
+
+// Struct to store all names related to an app (app name, space name, org name) so we can track if these have changed
+// for a given app and if so delete and recreate its app watcher
+type cfNames struct {
+	appName   string
+	spaceName string
+	orgName   string
+}
+
+func newCfNames(appName string, spaceName string, orgName string) cfNames {
+	return cfNames{
+		appName:   appName,
+		spaceName: spaceName,
+		orgName:   orgName,
+	}
 }
 
 type PaasExporter struct {
 	cf             CFClient
 	watcherManager WatcherManager
-	appNameByGuid  map[string]string
+	cfNamesByGuid  map[string]cfNames
 }
 
 func New(cf CFClient, wm WatcherManager) *PaasExporter {
 	return &PaasExporter{
 		cf:             cf,
 		watcherManager: wm,
-		appNameByGuid:  make(map[string]string),
+		cfNamesByGuid:  make(map[string]cfNames),
 	}
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	e.appNameByGuid[app.Guid] = app.Name
+	e.cfNamesByGuid[app.Guid] = newCfNames(
+		app.Name,
+		app.SpaceData.Entity.Name,
+		app.SpaceData.Entity.OrgData.Entity.Name,
+	)
 	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
-		prometheus.Labels{"guid": app.Guid, "app": app.Name},
+		prometheus.Labels{
+			"guid": app.Guid,
+			"app": app.Name,
+			"space": app.SpaceData.Entity.Name,
+			"org": app.SpaceData.Entity.OrgData.Entity.Name,
+		},
 		prometheus.DefaultRegisterer,
 	))
 }
 
 func (e *PaasExporter) deleteWatcher(appGuid string) {
 	e.watcherManager.DeleteWatcher(appGuid)
-	delete(e.appNameByGuid, appGuid)
+	delete(e.cfNamesByGuid, appGuid)
 }
 
 func (e *PaasExporter) checkForNewApps() error {
-	apps, err := e.cf.ListAppsByQuery(url.Values{})
+	apps, err := e.cf.ListAppsWithSpaceAndOrg()
 	if err != nil {
 		return err
 	}
@@ -53,9 +77,14 @@ func (e *PaasExporter) checkForNewApps() error {
 		if app.State == "STARTED" {
 			running[app.Guid] = true
 
-			if _, ok := e.appNameByGuid[app.Guid]; ok {
-				if e.appNameByGuid[app.Guid] != app.Name {
-					// Name changed, stop and restart
+			if cfNamesForGuid, ok := e.cfNamesByGuid[app.Guid]; ok {
+				latestCFNames := newCfNames(
+					app.Name,
+					app.SpaceData.Entity.Name,
+					app.SpaceData.Entity.OrgData.Entity.Name,
+				)
+				if cfNamesForGuid != latestCFNames {
+					// Either the name of the app, the name of it's space or the name of it's org has changed
 					e.deleteWatcher(app.Guid)
 					e.createNewWatcher(app)
 				} else {
@@ -69,7 +98,7 @@ func (e *PaasExporter) checkForNewApps() error {
 		}
 	}
 
-	for appGuid, _ := range e.appNameByGuid {
+	for appGuid, _ := range e.cfNamesByGuid {
 		if ok := running[appGuid]; !ok {
 			e.deleteWatcher(appGuid)
 		}

@@ -2,7 +2,6 @@
 package mocks
 
 import (
-	url "net/url"
 	sync "sync"
 
 	exporter "github.com/alphagov/paas-prometheus-exporter/exporter"
@@ -10,16 +9,15 @@ import (
 )
 
 type FakeCFClient struct {
-	ListAppsByQueryStub        func(url.Values) ([]cfclient.App, error)
-	listAppsByQueryMutex       sync.RWMutex
-	listAppsByQueryArgsForCall []struct {
-		arg1 url.Values
+	ListAppsWithSpaceAndOrgStub        func() ([]cfclient.App, error)
+	listAppsWithSpaceAndOrgMutex       sync.RWMutex
+	listAppsWithSpaceAndOrgArgsForCall []struct {
 	}
-	listAppsByQueryReturns struct {
+	listAppsWithSpaceAndOrgReturns struct {
 		result1 []cfclient.App
 		result2 error
 	}
-	listAppsByQueryReturnsOnCall map[int]struct {
+	listAppsWithSpaceAndOrgReturnsOnCall map[int]struct {
 		result1 []cfclient.App
 		result2 error
 	}
@@ -27,64 +25,56 @@ type FakeCFClient struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCFClient) ListAppsByQuery(arg1 url.Values) ([]cfclient.App, error) {
-	fake.listAppsByQueryMutex.Lock()
-	ret, specificReturn := fake.listAppsByQueryReturnsOnCall[len(fake.listAppsByQueryArgsForCall)]
-	fake.listAppsByQueryArgsForCall = append(fake.listAppsByQueryArgsForCall, struct {
-		arg1 url.Values
-	}{arg1})
-	fake.recordInvocation("ListAppsByQuery", []interface{}{arg1})
-	fake.listAppsByQueryMutex.Unlock()
-	if fake.ListAppsByQueryStub != nil {
-		return fake.ListAppsByQueryStub(arg1)
+func (fake *FakeCFClient) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
+	fake.listAppsWithSpaceAndOrgMutex.Lock()
+	ret, specificReturn := fake.listAppsWithSpaceAndOrgReturnsOnCall[len(fake.listAppsWithSpaceAndOrgArgsForCall)]
+	fake.listAppsWithSpaceAndOrgArgsForCall = append(fake.listAppsWithSpaceAndOrgArgsForCall, struct {
+	}{})
+	fake.recordInvocation("ListAppsWithSpaceAndOrg", []interface{}{})
+	fake.listAppsWithSpaceAndOrgMutex.Unlock()
+	if fake.ListAppsWithSpaceAndOrgStub != nil {
+		return fake.ListAppsWithSpaceAndOrgStub()
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	fakeReturns := fake.listAppsByQueryReturns
+	fakeReturns := fake.listAppsWithSpaceAndOrgReturns
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeCFClient) ListAppsByQueryCallCount() int {
-	fake.listAppsByQueryMutex.RLock()
-	defer fake.listAppsByQueryMutex.RUnlock()
-	return len(fake.listAppsByQueryArgsForCall)
+func (fake *FakeCFClient) ListAppsWithSpaceAndOrgCallCount() int {
+	fake.listAppsWithSpaceAndOrgMutex.RLock()
+	defer fake.listAppsWithSpaceAndOrgMutex.RUnlock()
+	return len(fake.listAppsWithSpaceAndOrgArgsForCall)
 }
 
-func (fake *FakeCFClient) ListAppsByQueryCalls(stub func(url.Values) ([]cfclient.App, error)) {
-	fake.listAppsByQueryMutex.Lock()
-	defer fake.listAppsByQueryMutex.Unlock()
-	fake.ListAppsByQueryStub = stub
+func (fake *FakeCFClient) ListAppsWithSpaceAndOrgCalls(stub func() ([]cfclient.App, error)) {
+	fake.listAppsWithSpaceAndOrgMutex.Lock()
+	defer fake.listAppsWithSpaceAndOrgMutex.Unlock()
+	fake.ListAppsWithSpaceAndOrgStub = stub
 }
 
-func (fake *FakeCFClient) ListAppsByQueryArgsForCall(i int) url.Values {
-	fake.listAppsByQueryMutex.RLock()
-	defer fake.listAppsByQueryMutex.RUnlock()
-	argsForCall := fake.listAppsByQueryArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeCFClient) ListAppsByQueryReturns(result1 []cfclient.App, result2 error) {
-	fake.listAppsByQueryMutex.Lock()
-	defer fake.listAppsByQueryMutex.Unlock()
-	fake.ListAppsByQueryStub = nil
-	fake.listAppsByQueryReturns = struct {
+func (fake *FakeCFClient) ListAppsWithSpaceAndOrgReturns(result1 []cfclient.App, result2 error) {
+	fake.listAppsWithSpaceAndOrgMutex.Lock()
+	defer fake.listAppsWithSpaceAndOrgMutex.Unlock()
+	fake.ListAppsWithSpaceAndOrgStub = nil
+	fake.listAppsWithSpaceAndOrgReturns = struct {
 		result1 []cfclient.App
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeCFClient) ListAppsByQueryReturnsOnCall(i int, result1 []cfclient.App, result2 error) {
-	fake.listAppsByQueryMutex.Lock()
-	defer fake.listAppsByQueryMutex.Unlock()
-	fake.ListAppsByQueryStub = nil
-	if fake.listAppsByQueryReturnsOnCall == nil {
-		fake.listAppsByQueryReturnsOnCall = make(map[int]struct {
+func (fake *FakeCFClient) ListAppsWithSpaceAndOrgReturnsOnCall(i int, result1 []cfclient.App, result2 error) {
+	fake.listAppsWithSpaceAndOrgMutex.Lock()
+	defer fake.listAppsWithSpaceAndOrgMutex.Unlock()
+	fake.ListAppsWithSpaceAndOrgStub = nil
+	if fake.listAppsWithSpaceAndOrgReturnsOnCall == nil {
+		fake.listAppsWithSpaceAndOrgReturnsOnCall = make(map[int]struct {
 			result1 []cfclient.App
 			result2 error
 		})
 	}
-	fake.listAppsByQueryReturnsOnCall[i] = struct {
+	fake.listAppsWithSpaceAndOrgReturnsOnCall[i] = struct {
 		result1 []cfclient.App
 		result2 error
 	}{result1, result2}
@@ -93,8 +83,8 @@ func (fake *FakeCFClient) ListAppsByQueryReturnsOnCall(i int, result1 []cfclient
 func (fake *FakeCFClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.listAppsByQueryMutex.RLock()
-	defer fake.listAppsByQueryMutex.RUnlock()
+	fake.listAppsWithSpaceAndOrgMutex.RLock()
+	defer fake.listAppsWithSpaceAndOrgMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
