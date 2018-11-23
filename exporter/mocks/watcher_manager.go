@@ -21,11 +21,10 @@ type FakeWatcherManager struct {
 	deleteWatcherArgsForCall []struct {
 		arg1 string
 	}
-	UpdateAppInstancesStub        func(string, int)
+	UpdateAppInstancesStub        func(cfclient.App)
 	updateAppInstancesMutex       sync.RWMutex
 	updateAppInstancesArgsForCall []struct {
-		arg1 string
-		arg2 int
+		arg1 cfclient.App
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -94,16 +93,15 @@ func (fake *FakeWatcherManager) DeleteWatcherArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeWatcherManager) UpdateAppInstances(arg1 string, arg2 int) {
+func (fake *FakeWatcherManager) UpdateAppInstances(arg1 cfclient.App) {
 	fake.updateAppInstancesMutex.Lock()
 	fake.updateAppInstancesArgsForCall = append(fake.updateAppInstancesArgsForCall, struct {
-		arg1 string
-		arg2 int
-	}{arg1, arg2})
-	fake.recordInvocation("UpdateAppInstances", []interface{}{arg1, arg2})
+		arg1 cfclient.App
+	}{arg1})
+	fake.recordInvocation("UpdateAppInstances", []interface{}{arg1})
 	fake.updateAppInstancesMutex.Unlock()
 	if fake.UpdateAppInstancesStub != nil {
-		fake.UpdateAppInstancesStub(arg1, arg2)
+		fake.UpdateAppInstancesStub(arg1)
 	}
 }
 
@@ -113,17 +111,17 @@ func (fake *FakeWatcherManager) UpdateAppInstancesCallCount() int {
 	return len(fake.updateAppInstancesArgsForCall)
 }
 
-func (fake *FakeWatcherManager) UpdateAppInstancesCalls(stub func(string, int)) {
+func (fake *FakeWatcherManager) UpdateAppInstancesCalls(stub func(cfclient.App)) {
 	fake.updateAppInstancesMutex.Lock()
 	defer fake.updateAppInstancesMutex.Unlock()
 	fake.UpdateAppInstancesStub = stub
 }
 
-func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) (string, int) {
+func (fake *FakeWatcherManager) UpdateAppInstancesArgsForCall(i int) cfclient.App {
 	fake.updateAppInstancesMutex.RLock()
 	defer fake.updateAppInstancesMutex.RUnlock()
 	argsForCall := fake.updateAppInstancesArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *FakeWatcherManager) Invocations() map[string][][]interface{} {

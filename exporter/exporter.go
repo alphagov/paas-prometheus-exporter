@@ -36,6 +36,11 @@ func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 	))
 }
 
+func (e *PaasExporter) deleteWatcher(appGuid string) {
+	e.watcherManager.DeleteWatcher(appGuid)
+	delete(e.appNameByGuid, appGuid)
+}
+
 func (e *PaasExporter) checkForNewApps() error {
 	apps, err := e.cf.ListAppsByQuery(url.Values{})
 	if err != nil {
@@ -45,28 +50,28 @@ func (e *PaasExporter) checkForNewApps() error {
 	running := map[string]bool{}
 
 	for _, app := range apps {
-		// TODO Do we need to check they're running or does the API return all of them?
-		// need to check app.State is "STARTED"
-		running[app.Guid] = true
+		if app.State == "STARTED" {
+			running[app.Guid] = true
 
-		if _, ok := e.appNameByGuid[app.Guid]; ok {
-			if e.appNameByGuid[app.Guid] != app.Name {
-				// Name changed, stop and restart
-				e.watcherManager.DeleteWatcher(app.Guid)
-				e.createNewWatcher(app)
+			if _, ok := e.appNameByGuid[app.Guid]; ok {
+				if e.appNameByGuid[app.Guid] != app.Name {
+					// Name changed, stop and restart
+					e.deleteWatcher(app.Guid)
+					e.createNewWatcher(app)
+				} else {
+					// notify watcher that instances may have changed
+					e.watcherManager.UpdateAppInstances(app)
+				}
 			} else {
-				// notify watcher that instances may have changed
-				e.watcherManager.UpdateAppInstances(app.Guid, app.Instances)
+				// new app
+				e.createNewWatcher(app)
 			}
-		} else {
-			// new app
-			e.createNewWatcher(app)
 		}
 	}
 
 	for appGuid, _ := range e.appNameByGuid {
 		if ok := running[appGuid]; !ok {
-			e.watcherManager.DeleteWatcher(appGuid)
+			e.deleteWatcher(appGuid)
 		}
 	}
 	return nil
