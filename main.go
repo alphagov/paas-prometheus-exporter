@@ -38,7 +38,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	e := exporter.New(cf, exporter.NewWatcherManager(config))
+	exporter_cf := exporter.NewCFClient(cf)
+
+	e := exporter.New(exporter_cf, exporter.NewWatcherManager(config))
 	go e.Start(time.Duration(*updateFrequency) * time.Second)
 	http.Handle("/metrics", promhttp.Handler())
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *prometheusBindPort), nil))

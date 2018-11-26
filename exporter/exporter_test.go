@@ -23,8 +23,8 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("creates a new app", func() {
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STARTED"},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
@@ -37,8 +37,8 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("does not create a new appWatcher if the app state is stopped", func() {
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STOPPED"},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
@@ -50,11 +50,11 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("creates a new appWatcher if a stopped app is started", func() {
-		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 0, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STOPPED"},
 		}, nil)
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STARTED"},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
@@ -67,10 +67,10 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("deletes an AppWatcher when an app is deleted", func() {
-		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STARTED"},
 		}, nil)
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{}, nil)
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
 
@@ -86,11 +86,11 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("deletes an AppWatcher when an app is stopped", func() {
-		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
-			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 1, Name: "foo", State: "STARTED"},
 		}, nil)
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 0, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 1, Name: "foo", State: "STOPPED"},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
@@ -107,11 +107,93 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("deletes and recreates an AppWatcher when an app is renamed", func() {
-		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STARTED"},
 		}, nil)
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "bar", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "bar", State: "STARTED"},
+		}, nil)
+
+		e := exporter.New(fakeClient, fakeWatcherManager)
+
+		go e.Start(100 * time.Millisecond)
+
+		// Assert addWatcher is called twice and only twice for example not in subsequent runs of `checkForNewApps`
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(2))
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(2))
+
+		// Assert deleteWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
+		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.DeleteWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
+	})
+
+	It("deletes and recreates an AppWatcher when an app's space is renamed", func() {
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 1,
+				Name: "foo",
+				State: "STARTED",
+				SpaceData: cfclient.SpaceResource{Entity: cfclient.Space{Name: "spacename"}},
+			},
+		}, nil)
+
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 1,
+				Name: "foo",
+				State: "STARTED",
+				SpaceData: cfclient.SpaceResource{Entity: cfclient.Space{Name: "spacenamenew"}},
+			},
+		}, nil)
+
+		e := exporter.New(fakeClient, fakeWatcherManager)
+
+		go e.Start(100 * time.Millisecond)
+
+		// Assert addWatcher is called twice and only twice for example not in subsequent runs of `checkForNewApps`
+		Eventually(fakeWatcherManager.AddWatcherCallCount).Should(Equal(2))
+		Consistently(fakeWatcherManager.AddWatcherCallCount, 200 * time.Millisecond).Should(Equal(2))
+
+		// Assert deleteWatcher is called once and only once for example not in subsequent runs of `checkForNewApps`
+		Eventually(fakeWatcherManager.DeleteWatcherCallCount).Should(Equal(1))
+		Consistently(fakeWatcherManager.DeleteWatcherCallCount, 200 * time.Millisecond).Should(Equal(1))
+	})
+
+	It("deletes and recreates an AppWatcher when an app's org is renamed", func() {
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 1,
+				Name: "foo",
+				State: "STARTED",
+				SpaceData: cfclient.SpaceResource{
+					Entity: cfclient.Space{
+						Name: "spacename",
+						OrgData: cfclient.OrgResource{
+							Entity: cfclient.Org{Name: "orgname"},
+						},
+					},
+				},
+			},
+		}, nil)
+
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{
+				Guid: "33333333-3333-3333-3333-333333333333",
+				Instances: 1,
+				Name: "foo",
+				State: "STARTED",
+				SpaceData: cfclient.SpaceResource{
+					Entity: cfclient.Space{
+						Name: "spacename",
+						OrgData: cfclient.OrgResource{
+							Entity: cfclient.Org{Name: "orgnamenew"},
+						},
+					},
+				},
+			},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
@@ -128,11 +210,11 @@ var _ = Describe("CheckForNewApps", func() {
 	})
 
 	It("updates an AppWatcher when an app changes size", func() {
-		fakeClient.ListAppsByQueryReturnsOnCall(0, []cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", State: "STARTED"},
 		}, nil)
-		fakeClient.ListAppsByQueryReturns([]cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 2, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
+		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 2, Name: "foo", State: "STARTED"},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
