@@ -21,11 +21,11 @@ type cfNames struct {
 	orgName   string
 }
 
-func newCfNames(appName string, spaceName string, orgName string) cfNames {
+func newCfNames(app cfclient.App) cfNames {
 	return cfNames{
-		appName:   appName,
-		spaceName: spaceName,
-		orgName:   orgName,
+		appName:   app.Name,
+		spaceName: app.SpaceData.Entity.Name,
+		orgName:   app.SpaceData.Entity.OrgData.Entity.Name,
 	}
 }
 
@@ -44,11 +44,7 @@ func New(cf CFClient, wm WatcherManager) *PaasExporter {
 }
 
 func (e *PaasExporter) createNewWatcher(app cfclient.App) {
-	e.cfNamesByGuid[app.Guid] = newCfNames(
-		app.Name,
-		app.SpaceData.Entity.Name,
-		app.SpaceData.Entity.OrgData.Entity.Name,
-	)
+	e.cfNamesByGuid[app.Guid] = newCfNames(app)
 	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{
 			"guid": app.Guid,
@@ -78,12 +74,7 @@ func (e *PaasExporter) checkForNewApps() error {
 			running[app.Guid] = true
 
 			if cfNamesForGuid, ok := e.cfNamesByGuid[app.Guid]; ok {
-				latestCFNames := newCfNames(
-					app.Name,
-					app.SpaceData.Entity.Name,
-					app.SpaceData.Entity.OrgData.Entity.Name,
-				)
-				if cfNamesForGuid != latestCFNames {
+				if cfNamesForGuid != newCfNames(app) {
 					// Either the name of the app, the name of it's space or the name of it's org has changed
 					e.deleteWatcher(app.Guid)
 					e.createNewWatcher(app)
