@@ -51,7 +51,7 @@ var _ = Describe("CheckForNewApps", func() {
 
 	It("creates a new appWatcher if a stopped app is started", func() {
 		fakeClient.ListAppsWithSpaceAndOrgReturnsOnCall(0, []cfclient.App{
-			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 0, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
+			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
 		}, nil)
 		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
@@ -90,7 +90,7 @@ var _ = Describe("CheckForNewApps", func() {
 			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STARTED"},
 		}, nil)
 		fakeClient.ListAppsWithSpaceAndOrgReturns([]cfclient.App{
-			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 0, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
+			{Guid: "11111111-11111-11111-1111-111-11-1-1-1", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123", State: "STOPPED"},
 		}, nil)
 
 		e := exporter.New(fakeClient, fakeWatcherManager)
