@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"bytes"
 	"encoding/json"
+	"time"
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,6 +27,8 @@ type InstanceMetrics struct {
 	DiskUtilization   prometheus.Gauge
 	MemoryBytes       prometheus.Gauge
 	MemoryUtilization prometheus.Gauge
+	Requests          *prometheus.CounterVec
+	ResponseTime      *prometheus.HistogramVec
 }
 
 func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
@@ -77,6 +80,29 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 				ConstLabels: constLabels,
 			},
 		),
+		Requests: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "requests",
+				Help: "Counter of http requests for a given app instance",
+				ConstLabels: constLabels,
+			},
+			[]string{"status_range"},
+		),
+		ResponseTime: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name: "response_time",
+				Help: "Histogram of http request time for a given app instance",
+				ConstLabels: constLabels,
+			},
+			[]string{"status_range"},
+		),
+	}
+
+	// This initalises with a zero value for requests and responseTime for each
+	// statusRange
+	for _, statusRange := range []string{"2xx", "3xx", "4xx", "5xx"} {
+		im.Requests.GetMetricWithLabelValues(statusRange)
+		im.ResponseTime.GetMetricWithLabelValues(statusRange)
 	}
 
 	im.registerInstanceMetrics()
@@ -91,6 +117,8 @@ func (im *InstanceMetrics) registerInstanceMetrics() {
 	im.Registerer.MustRegister(im.DiskUtilization)
 	im.Registerer.MustRegister(im.MemoryBytes)
 	im.Registerer.MustRegister(im.MemoryUtilization)
+	im.Registerer.MustRegister(im.Requests)
+	im.Registerer.MustRegister(im.ResponseTime)
 }
 
 func (im *InstanceMetrics) unregisterInstanceMetrics() {
@@ -100,6 +128,8 @@ func (im *InstanceMetrics) unregisterInstanceMetrics() {
 	im.Registerer.Unregister(im.DiskUtilization)
 	im.Registerer.Unregister(im.MemoryBytes)
 	im.Registerer.Unregister(im.MemoryUtilization)
+	im.Registerer.Unregister(im.Requests)
+	im.Registerer.Unregister(im.ResponseTime)
 }
 
 func NewAppWatcher(
@@ -147,6 +177,8 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 				}
 			case sonde_events.Envelope_ContainerMetric:
 				m.processContainerMetric(message.GetContainerMetric())
+			case sonde_events.Envelope_HttpStartStop:
+				m.processHttpStartStopMetric(message.GetHttpStartStop())
 			}
 		case err, ok := <-errs:
 			if !ok {
@@ -222,6 +254,15 @@ func (m *AppWatcher) processLogMessage(logMessage *sonde_events.LogMessage) erro
 	return nil
 }
 
+func (m *AppWatcher) processHttpStartStopMetric(httpStartStop *sonde_events.HttpStartStop) {
+	responseDuration := float64(time.Duration(httpStartStop.GetStopTimestamp() - httpStartStop.GetStartTimestamp())) / float64(time.Second)
+	index := int(httpStartStop.GetInstanceIndex())
+	if index < len(m.MetricsForInstance) {
+		statusRange := fmt.Sprintf("%dxx", *httpStartStop.StatusCode / 100)
+		m.MetricsForInstance[index].Requests.WithLabelValues(statusRange).Inc()
+		m.MetricsForInstance[index].ResponseTime.WithLabelValues(statusRange).Observe(responseDuration)
+	}
+}
 
 func (m *AppWatcher) UpdateAppInstances(newNumberOfInstances int) {
 	m.numberOfInstancesChan <- newNumberOfInstances

@@ -28,11 +28,11 @@ func main() {
 	kingpin.Parse()
 
 	config := &cfclient.Config{
-		ApiAddress:        *apiEndpoint,
-		Username:          *username,
-		Password:          *password,
-		ClientID:          *clientID,
-		ClientSecret:      *clientSecret,
+		ApiAddress:   *apiEndpoint,
+		Username:     *username,
+		Password:     *password,
+		ClientID:     *clientID,
+		ClientSecret: *clientSecret,
 	}
 
 	cf, err := cfclient.NewClient(config)
