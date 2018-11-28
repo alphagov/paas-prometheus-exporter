@@ -2,6 +2,8 @@ package events
 
 import (
 	"fmt"
+	"bytes"
+	"encoding/json"
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -19,6 +21,7 @@ type AppWatcher struct {
 type InstanceMetrics struct {
 	Registerer        prometheus.Registerer
 	Cpu               prometheus.Gauge
+	Crashes           prometheus.Counter
 	DiskBytes         prometheus.Gauge
 	DiskUtilization   prometheus.Gauge
 	MemoryBytes       prometheus.Gauge
@@ -36,6 +39,13 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 			prometheus.GaugeOpts{
 				Name: "cpu",
 				Help: "CPU utilisation in percent (0-100)",
+				ConstLabels: constLabels,
+			},
+		),
+		Crashes: prometheus.NewCounter(
+			prometheus.CounterOpts{
+				Name: "crashes",
+				Help: "Number of app instance crashes",
 				ConstLabels: constLabels,
 			},
 		),
@@ -76,6 +86,7 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 
 func (im *InstanceMetrics) registerInstanceMetrics() {
 	im.Registerer.MustRegister(im.Cpu)
+	im.Registerer.MustRegister(im.Crashes)
 	im.Registerer.MustRegister(im.DiskBytes)
 	im.Registerer.MustRegister(im.DiskUtilization)
 	im.Registerer.MustRegister(im.MemoryBytes)
@@ -84,6 +95,7 @@ func (im *InstanceMetrics) registerInstanceMetrics() {
 
 func (im *InstanceMetrics) unregisterInstanceMetrics() {
 	im.Registerer.Unregister(im.Cpu)
+	im.Registerer.Unregister(im.Crashes)
 	im.Registerer.Unregister(im.DiskBytes)
 	im.Registerer.Unregister(im.DiskUtilization)
 	im.Registerer.Unregister(im.MemoryBytes)
@@ -104,7 +116,7 @@ func NewAppWatcher(
 	}
 	appWatcher.scaleTo(app.Instances)
 
-	// FIXME: what if the appWatcher errors? we currently ignore it
+	// TODO: what if the appWatcher errors? we currently ignore it
 	go appWatcher.Run()
 	return appWatcher
 }
@@ -128,6 +140,11 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 				continue
 			}
 			switch message.GetEventType() {
+			case sonde_events.Envelope_LogMessage:
+				err := m.processLogMessage(message.GetLogMessage())
+				if err != nil {
+					return err
+				}
 			case sonde_events.Envelope_ContainerMetric:
 				m.processContainerMetric(message.GetContainerMetric())
 			}
@@ -166,6 +183,45 @@ func (m *AppWatcher) processContainerMetric(metric *sonde_events.ContainerMetric
 		instance.MemoryUtilization.Set(memoryUtilizationPercentage)
 	}
 }
+
+func (m *AppWatcher) processLogMessage(logMessage *sonde_events.LogMessage) error {
+	if logMessage.GetSourceType() != "API" || logMessage.GetMessageType() != sonde_events.LogMessage_OUT {
+		return nil
+	}
+	if !bytes.HasPrefix(logMessage.Message, []byte("App instance exited with guid ")) {
+		return nil
+	}
+
+	payloadStartMarker := []byte(" payload: {")
+	payloadStartMarkerPosition := bytes.Index(logMessage.Message, payloadStartMarker)
+	if payloadStartMarkerPosition < 0 {
+		return fmt.Errorf("unable to find start of payload in app instance exit log: %s", logMessage.Message)
+	}
+	payloadStartPosition := payloadStartMarkerPosition + len(payloadStartMarker) - 1
+
+	payload := logMessage.Message[payloadStartPosition:]
+	payloadAsJson := bytes.Replace(payload, []byte("=>"), []byte(":"), -1)
+
+	var logMessagePayload struct {
+		Index  int    `json:"index"`
+		Reason string `json:"reason"`
+	}
+	err := json.Unmarshal(payloadAsJson, &logMessagePayload)
+	if err != nil {
+		return fmt.Errorf("unable to parse payload in app instance exit log: %s", err)
+	}
+
+	if logMessagePayload.Reason != "CRASHED" {
+		return nil
+	}
+
+	index := logMessagePayload.Index
+	if index < len(m.MetricsForInstance) {
+		m.MetricsForInstance[index].Crashes.Inc()
+	}
+	return nil
+}
+
 
 func (m *AppWatcher) UpdateAppInstances(newNumberOfInstances int) {
 	m.numberOfInstancesChan <- newNumberOfInstances
