@@ -33,6 +33,10 @@ Refer to the [PaaS Technical Documentation](https://docs.cloud.service.gov.uk/mo
 |Update frequency|update-frequency|UPDATE_FREQUENCY|The time in seconds, that takes between each apps update call|
 |Prometheus Bind Port|prometheus-bind-port|PORT|The port that the prometheus server binds to. Default is 8080|
 
+## Development
+
+With each update of the PaaS Prometheus Exporter you should update the version number located in `main.go` file at the top of the `var` block.
+
 ## Testing
 
 To run the test suite, first make sure you have ginkgo and gomega installed:

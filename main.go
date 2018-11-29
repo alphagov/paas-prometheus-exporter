@@ -8,11 +8,13 @@ import (
 
 	"github.com/alphagov/paas-prometheus-exporter/exporter"
 	"github.com/cloudfoundry-community/go-cfclient"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
+	version            = "0.0.1"
 	apiEndpoint        = kingpin.Flag("api-endpoint", "API endpoint").Default("https://api.10.244.0.34.xip.io").OverrideDefaultFromEnvar("API_ENDPOINT").String()
 	username           = kingpin.Flag("username", "UAA username.").Default("").OverrideDefaultFromEnvar("USERNAME").String()
 	password           = kingpin.Flag("password", "UAA password.").Default("").OverrideDefaultFromEnvar("PASSWORD").String()
@@ -37,6 +39,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	build_info := prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "paas_exporter_build_info",
+			Help: "PaaS Prometheus exporter build info.",
+			ConstLabels: prometheus.Labels{
+				"version": version,
+			},
+		},
+	)
+	build_info.Set(1)
+	prometheus.DefaultRegisterer.MustRegister(build_info)
 
 	exporter_cf := exporter.NewCFClient(cf)
 
