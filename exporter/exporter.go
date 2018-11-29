@@ -50,7 +50,7 @@ func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 			"guid": app.Guid,
 			"app": app.Name,
 			"space": app.SpaceData.Entity.Name,
-			"org": app.SpaceData.Entity.OrgData.Entity.Name,
+			"organisation": app.SpaceData.Entity.OrgData.Entity.Name,
 		},
 		prometheus.DefaultRegisterer,
 	))
