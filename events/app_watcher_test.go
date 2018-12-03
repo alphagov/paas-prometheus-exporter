@@ -4,9 +4,11 @@ import (
 	"errors"
 	"sync"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo/extensions/table"
 
 	"github.com/alphagov/paas-prometheus-exporter/events"
 	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
@@ -52,13 +54,14 @@ func (m *FakeRegistry) UnregisterCallCount() int {
 }
 
 var _ = Describe("AppWatcher", func() {
-	const METRICS_PER_INSTANCE = 6
+	const METRICS_PER_INSTANCE = 8
 
 	var (
 		appWatcher     	         *events.AppWatcher
 		registerer     	         *FakeRegistry
 		streamProvider 	         *mocks.FakeAppStreamProvider
 		closeAppWatcherAfterTest bool
+		sondeEventChan           chan *sonde_events.Envelope
 	)
 
 	BeforeEach(func() {
@@ -68,6 +71,9 @@ var _ = Describe("AppWatcher", func() {
 
 		registerer = &FakeRegistry{}
 		streamProvider = &mocks.FakeAppStreamProvider{}
+		sondeEventChan = make(chan *sonde_events.Envelope, 10)
+		streamProvider.OpenStreamForReturns(sondeEventChan, nil)
+
 		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
 		closeAppWatcherAfterTest = true
 	})
@@ -127,10 +133,8 @@ var _ = Describe("AppWatcher", func() {
 				MemoryBytesQuota: &memoryBytesQuota,
 			}
 
-			messages := make(chan *sonde_events.Envelope, 1)
 			metricType := sonde_events.Envelope_ContainerMetric
-			messages <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
-			streamProvider.OpenStreamForReturns(messages, nil)
+			sondeEventChan <- &sonde_events.Envelope{ContainerMetric: &containerMetric, EventType: &metricType}
 
 			cpuGauge := appWatcher.MetricsForInstance[instanceIndex].Cpu
 			diskBytesGauge := appWatcher.MetricsForInstance[instanceIndex].DiskBytes
@@ -171,15 +175,13 @@ var _ = Describe("AppWatcher", func() {
 				},
 			}
 
-			messages := make(chan *sonde_events.Envelope, 1)
-			streamProvider.OpenStreamForReturns(messages, nil)
 			crashCounter := &appWatcher.MetricsForInstance[instanceIndex].Crashes
 
-			messages <- &crashEnvelope
+			sondeEventChan <- &crashEnvelope
 			Eventually(func() float64 { return testutil.ToFloat64(*crashCounter) }).Should(Equal(float64(1)))
 
 			// Send another message to be extra confident that the behaviour is incremental
-			messages <- &crashEnvelope
+			sondeEventChan <- &crashEnvelope
 			Eventually(func() float64 { return testutil.ToFloat64(*crashCounter) }).Should(Equal(float64(2)))
 		})
 
@@ -252,16 +254,56 @@ var _ = Describe("AppWatcher", func() {
 				},
 			}
 
-			messages := make(chan *sonde_events.Envelope, len(appNonCrashEnvelopes))
-			streamProvider.OpenStreamForReturns(messages, nil)
 			crashCounter := &appWatcher.MetricsForInstance[instanceIndex].Crashes
 
 			for _, envelope := range appNonCrashEnvelopes {
-				messages <- &envelope
+				sondeEventChan <- &envelope
 			}
 
-			Consistently(func() float64 { return testutil.ToFloat64(*crashCounter) }).Should(Equal(float64(0)))	
+			Consistently(func() float64 { return testutil.ToFloat64(*crashCounter) }).Should(Equal(float64(0)))
 		})
+
+		DescribeTable("increments the request metric for a given http status code range",
+			func(statusRange string, statusCode int32) {
+				// This test is currently limited to requests. Ideally it would also test the
+				// response_time histogram but it's not possible to get private data out of
+				// the histogram about its buckets and their values.
+
+				startTimestamp := int64(0)
+				stopTimestamp := int64(11 * time.Millisecond)
+				clientPeerType := sonde_events.PeerType_Client
+				getMethod := sonde_events.Method_GET
+				instanceIndex := int32(0)
+				envelopeHttpStartStopEventType := sonde_events.Envelope_HttpStartStop
+
+				requestEnvelope := sonde_events.Envelope{
+					EventType: &envelopeHttpStartStopEventType,
+					HttpStartStop: &sonde_events.HttpStartStop{
+						StartTimestamp: &startTimestamp,
+						StopTimestamp:  &stopTimestamp,
+						PeerType:       &clientPeerType,
+						Method:         &getMethod,
+						Uri:            str("/"),
+						StatusCode:     &statusCode,
+						InstanceIndex:  &instanceIndex,
+					},
+				}
+
+				requestCounterVec := appWatcher.MetricsForInstance[instanceIndex].Requests
+				requestCounter, _ := requestCounterVec.GetMetricWithLabelValues(statusRange)
+
+				sondeEventChan <- &requestEnvelope
+				Eventually(func() float64 { return testutil.ToFloat64(requestCounter) }).Should(Equal(float64(1)))
+
+				// Send another event to be extra confident that the behaviour is incremental
+				sondeEventChan <- &requestEnvelope
+				Eventually(func() float64 { return testutil.ToFloat64(requestCounter) }).Should(Equal(float64(2)))
+			},
+			Entry("increments the 2xx request metric", "2xx", int32(226)),
+			Entry("increments the 3xx request metric", "3xx", int32(302)),
+			Entry("increments the 4xx request metric", "4xx", int32(418)),
+			Entry("increments the 5xx request metric", "5xx", int32(507)),
+		)
 
 		// TODO: should we test the error paths?
 		// how do we test them? As they are no handled but simply bubble up and then ignored
