@@ -255,7 +255,7 @@ func (m *AppWatcher) processLogMessage(logMessage *sonde_events.LogMessage) erro
 }
 
 func (m *AppWatcher) processHttpStartStopMetric(httpStartStop *sonde_events.HttpStartStop) {
-	responseDuration := float64(time.Duration(httpStartStop.GetStopTimestamp() - httpStartStop.GetStartTimestamp())) / float64(time.Second)
+	responseDuration := time.Duration(httpStartStop.GetStopTimestamp() - httpStartStop.GetStartTimestamp()).Seconds()
 	index := int(httpStartStop.GetInstanceIndex())
 	if index < len(m.MetricsForInstance) {
 		statusRange := fmt.Sprintf("%dxx", *httpStartStop.StatusCode / 100)
