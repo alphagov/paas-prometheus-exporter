@@ -10,11 +10,17 @@ import (
 )
 
 type FakeWatcherManager struct {
-	AddWatcherStub        func(cfclient.App, prometheus.Registerer)
+	AddWatcherStub        func(cfclient.App, prometheus.Registerer) error
 	addWatcherMutex       sync.RWMutex
 	addWatcherArgsForCall []struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
+	}
+	addWatcherReturns struct {
+		result1 error
+	}
+	addWatcherReturnsOnCall map[int]struct {
+		result1 error
 	}
 	DeleteWatcherStub        func(string)
 	deleteWatcherMutex       sync.RWMutex
@@ -30,8 +36,9 @@ type FakeWatcherManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeWatcherManager) AddWatcher(arg1 cfclient.App, arg2 prometheus.Registerer) {
+func (fake *FakeWatcherManager) AddWatcher(arg1 cfclient.App, arg2 prometheus.Registerer) error {
 	fake.addWatcherMutex.Lock()
+	ret, specificReturn := fake.addWatcherReturnsOnCall[len(fake.addWatcherArgsForCall)]
 	fake.addWatcherArgsForCall = append(fake.addWatcherArgsForCall, struct {
 		arg1 cfclient.App
 		arg2 prometheus.Registerer
@@ -39,8 +46,13 @@ func (fake *FakeWatcherManager) AddWatcher(arg1 cfclient.App, arg2 prometheus.Re
 	fake.recordInvocation("AddWatcher", []interface{}{arg1, arg2})
 	fake.addWatcherMutex.Unlock()
 	if fake.AddWatcherStub != nil {
-		fake.AddWatcherStub(arg1, arg2)
+		return fake.AddWatcherStub(arg1, arg2)
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.addWatcherReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeWatcherManager) AddWatcherCallCount() int {
@@ -49,7 +61,7 @@ func (fake *FakeWatcherManager) AddWatcherCallCount() int {
 	return len(fake.addWatcherArgsForCall)
 }
 
-func (fake *FakeWatcherManager) AddWatcherCalls(stub func(cfclient.App, prometheus.Registerer)) {
+func (fake *FakeWatcherManager) AddWatcherCalls(stub func(cfclient.App, prometheus.Registerer) error) {
 	fake.addWatcherMutex.Lock()
 	defer fake.addWatcherMutex.Unlock()
 	fake.AddWatcherStub = stub
@@ -60,6 +72,29 @@ func (fake *FakeWatcherManager) AddWatcherArgsForCall(i int) (cfclient.App, prom
 	defer fake.addWatcherMutex.RUnlock()
 	argsForCall := fake.addWatcherArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeWatcherManager) AddWatcherReturns(result1 error) {
+	fake.addWatcherMutex.Lock()
+	defer fake.addWatcherMutex.Unlock()
+	fake.AddWatcherStub = nil
+	fake.addWatcherReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeWatcherManager) AddWatcherReturnsOnCall(i int, result1 error) {
+	fake.addWatcherMutex.Lock()
+	defer fake.addWatcherMutex.Unlock()
+	fake.AddWatcherStub = nil
+	if fake.addWatcherReturnsOnCall == nil {
+		fake.addWatcherReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.addWatcherReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeWatcherManager) DeleteWatcher(arg1 string) {

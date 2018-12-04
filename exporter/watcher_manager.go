@@ -9,7 +9,7 @@ import (
 
 //go:generate counterfeiter -o mocks/watcher_manager.go . WatcherManager
 type WatcherManager interface {
-	AddWatcher(cfclient.App, prometheus.Registerer)
+	AddWatcher(cfclient.App, prometheus.Registerer) error
 	DeleteWatcher(appGuid string)
 	UpdateAppInstances(cfclient.App)
 }
@@ -26,11 +26,17 @@ func NewWatcherManager(config *cfclient.Config) WatcherManager {
 	}
 }
 
-func (wm *ConcreteWatcherManager) AddWatcher(app cfclient.App, registry prometheus.Registerer) {
+func (wm *ConcreteWatcherManager) AddWatcher(app cfclient.App, registry prometheus.Registerer) error {
 	var provider events.AppStreamProvider = &events.DopplerAppStreamProvider{
 		Config: wm.config,
 	}
-	wm.watchers[app.Guid] =	events.NewAppWatcher(app, registry, provider)
+	aw, err := events.NewAppWatcher(app, registry, provider)
+	if err != nil {
+		return err
+	}
+
+	wm.watchers[app.Guid] = aw
+	return nil
 }
 
 func (wm *ConcreteWatcherManager) DeleteWatcher(appGuid string) {

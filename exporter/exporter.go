@@ -43,9 +43,9 @@ func New(cf CFClient, wm WatcherManager) *PaasExporter {
 	}
 }
 
-func (e *PaasExporter) createNewWatcher(app cfclient.App) {
+func (e *PaasExporter) createNewWatcher(app cfclient.App) error {
 	e.cfNamesByGuid[app.Guid] = newCfNames(app)
-	e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
+	err := e.watcherManager.AddWatcher(app, prometheus.WrapRegistererWith(
 		prometheus.Labels{
 			"guid": app.Guid,
 			"app": app.Name,
@@ -54,6 +54,10 @@ func (e *PaasExporter) createNewWatcher(app cfclient.App) {
 		},
 		prometheus.DefaultRegisterer,
 	))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (e *PaasExporter) deleteWatcher(appGuid string) {
@@ -77,14 +81,20 @@ func (e *PaasExporter) checkForNewApps() error {
 				if cfNamesForGuid != newCfNames(app) {
 					// Either the name of the app, the name of it's space or the name of it's org has changed
 					e.deleteWatcher(app.Guid)
-					e.createNewWatcher(app)
+					err := e.createNewWatcher(app)
+					if err != nil {
+						return err
+					}
 				} else {
 					// notify watcher that instances may have changed
 					e.watcherManager.UpdateAppInstances(app)
 				}
 			} else {
 				// new app
-				e.createNewWatcher(app)
+				err := e.createNewWatcher(app)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

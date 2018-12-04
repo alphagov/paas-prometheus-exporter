@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"time"
+	"log"
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -31,7 +32,7 @@ type InstanceMetrics struct {
 	ResponseTime      *prometheus.HistogramVec
 }
 
-func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) InstanceMetrics {
+func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) (InstanceMetrics, error) {
 	constLabels := prometheus.Labels{
 		"instance": fmt.Sprintf("%d", instanceIndex),
 	}
@@ -101,13 +102,20 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) Ins
 	// This initalises with a zero value for requests and responseTime for each
 	// statusRange
 	for _, statusRange := range []string{"2xx", "3xx", "4xx", "5xx"} {
-		im.Requests.GetMetricWithLabelValues(statusRange)
-		im.ResponseTime.GetMetricWithLabelValues(statusRange)
+		_, err := im.Requests.GetMetricWithLabelValues(statusRange)
+		if err != nil {
+			return im, err
+		}
+
+		_, err = im.ResponseTime.GetMetricWithLabelValues(statusRange)
+		if err != nil {
+			return im, err
+		}
 	}
 
 	im.registerInstanceMetrics()
 
-	return im
+	return im, nil
 }
 
 func (im *InstanceMetrics) registerInstanceMetrics() {
@@ -136,7 +144,7 @@ func NewAppWatcher(
 	app cfclient.App,
 	registerer prometheus.Registerer,
 	streamProvider AppStreamProvider,
-) *AppWatcher {
+) (*AppWatcher, error) {
 	appWatcher := &AppWatcher{
 		appGuid:               app.Guid,
 		MetricsForInstance:    make([]InstanceMetrics, 0),
@@ -144,19 +152,23 @@ func NewAppWatcher(
 		registerer:            registerer,
 		streamProvider:        streamProvider,
 	}
-	appWatcher.scaleTo(app.Instances)
+	err := appWatcher.scaleTo(app.Instances)
+	if err != nil {
+		return appWatcher, err
+	}
 
-	// TODO: what if the appWatcher errors? we currently ignore it
 	go appWatcher.Run()
-	return appWatcher
+	return appWatcher, nil
 }
 
-func (m *AppWatcher) Run() error {
+func (m *AppWatcher) Run(){
 	msgs, errs := m.streamProvider.OpenStreamFor(m.appGuid)
 	defer m.streamProvider.Close()
 
 	err := m.mainLoop(msgs, errs)
-	return err
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan error) error {
@@ -191,11 +203,17 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 			return err
 		case newNumberOfInstances, ok := <-m.numberOfInstancesChan:
 			if !ok {
-				m.scaleTo(0)
+				err := m.scaleTo(0)
+				if err != nil {
+					return err
+				}
 				return nil
 			}
 
-			m.scaleTo(newNumberOfInstances)
+			err := m.scaleTo(newNumberOfInstances)
+			if err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -272,12 +290,16 @@ func (m *AppWatcher) Close() {
 	close(m.numberOfInstancesChan)
 }
 
-func (m *AppWatcher) scaleTo(newInstanceCount int) {
+func (m *AppWatcher) scaleTo(newInstanceCount int) error {
 	currentInstanceCount := len(m.MetricsForInstance)
 
 	if currentInstanceCount < newInstanceCount {
 		for i := currentInstanceCount; i < newInstanceCount; i++ {
-			m.MetricsForInstance = append(m.MetricsForInstance, NewInstanceMetrics(i, m.registerer))
+			im, err := NewInstanceMetrics(i, m.registerer)
+			if err != nil {
+				return err
+			}
+			m.MetricsForInstance = append(m.MetricsForInstance, im)
 		}
 	} else {
 		for i := currentInstanceCount; i > newInstanceCount; i-- {
@@ -285,4 +307,5 @@ func (m *AppWatcher) scaleTo(newInstanceCount int) {
 		}
 		m.MetricsForInstance = m.MetricsForInstance[0:newInstanceCount]
 	}
+	return nil
 }
