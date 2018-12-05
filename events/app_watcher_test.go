@@ -74,7 +74,7 @@ var _ = Describe("AppWatcher", func() {
 		sondeEventChan = make(chan *sonde_events.Envelope, 10)
 		streamProvider.OpenStreamForReturns(sondeEventChan, nil)
 
-		appWatcher = events.NewAppWatcher(apps[0], registerer, streamProvider)
+		appWatcher, _ = events.NewAppWatcher(apps[0], registerer, streamProvider)
 		closeAppWatcherAfterTest = true
 	})
 

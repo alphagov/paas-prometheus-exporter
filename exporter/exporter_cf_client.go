@@ -33,6 +33,6 @@ func (e *ExporterCFClient) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
 		space.OrgData.Entity = org
 		app.SpaceData.Entity = space
 		apps[idx] = app
-		}
+	}
 	return apps, nil
 }

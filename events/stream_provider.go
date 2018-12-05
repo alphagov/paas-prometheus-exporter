@@ -1,8 +1,6 @@
 package events
 
 import (
-	"crypto/tls"
-
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/cloudfoundry/noaa/consumer"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
@@ -27,18 +25,18 @@ type DopplerAppStreamProvider struct {
 func (m *DopplerAppStreamProvider) OpenStreamFor(appGuid string) (<-chan *sonde_events.Envelope, <-chan error) {
 	err := m.authenticate()
 	if err != nil {
-		errs := make(chan error,1)
+		errs := make(chan error, 1)
 		errs <- err
 		return nil, errs
 	}
-	tlsConfig := tls.Config{InsecureSkipVerify: false} // TODO: is this needed?
-	conn := consumer.New(m.cfClient.Endpoint.DopplerEndpoint, &tlsConfig, nil)
+
+	conn := consumer.New(m.cfClient.Endpoint.DopplerEndpoint, nil, nil)
 	m.conn = conn
 	conn.RefreshTokenFrom(m)
 
 	authToken, err := m.cfClient.GetToken()
 	if err != nil {
-		errs := make(chan error,1)
+		errs := make(chan error, 1)
 		errs <- err
 		return nil, errs
 	}
