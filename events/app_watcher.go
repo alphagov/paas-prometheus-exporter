@@ -176,10 +176,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 		select {
 		case message, ok := <-msgs:
 			if !ok {
-				// delete all instances
-				m.Close()
-				msgs = nil
-				continue
+				return fmt.Errorf("AppWatcher messages channel was closed, for guid %s", m.appGuid)
 			}
 			switch message.GetEventType() {
 			case sonde_events.Envelope_LogMessage:
@@ -194,8 +191,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 			}
 		case err, ok := <-errs:
 			if !ok {
-				errs = nil
-				continue
+				return fmt.Errorf("AppWatcher errors channel was closed, for guid %s", m.appGuid)
 			}
 			if err == nil {
 				continue
