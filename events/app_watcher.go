@@ -7,9 +7,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/cloudfoundry-community/go-cfclient"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/cloudfoundry-community/go-cfclient"
 )
 
 type AppWatcher struct {
@@ -23,7 +23,7 @@ type AppWatcher struct {
 type InstanceMetrics struct {
 	Registerer        prometheus.Registerer
 	Cpu               prometheus.Gauge
-	Crashes           prometheus.Counter
+	Crash             prometheus.Counter
 	DiskBytes         prometheus.Gauge
 	DiskUtilization   prometheus.Gauge
 	MemoryBytes       prometheus.Gauge
@@ -46,9 +46,9 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) (In
 				ConstLabels: constLabels,
 			},
 		),
-		Crashes: prometheus.NewCounter(
+		Crash: prometheus.NewCounter(
 			prometheus.CounterOpts{
-				Name:        "crashes",
+				Name:        "crash",
 				Help:        "Number of app instance crashes",
 				ConstLabels: constLabels,
 			},
@@ -120,7 +120,7 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) (In
 
 func (im *InstanceMetrics) registerInstanceMetrics() {
 	im.Registerer.MustRegister(im.Cpu)
-	im.Registerer.MustRegister(im.Crashes)
+	im.Registerer.MustRegister(im.Crash)
 	im.Registerer.MustRegister(im.DiskBytes)
 	im.Registerer.MustRegister(im.DiskUtilization)
 	im.Registerer.MustRegister(im.MemoryBytes)
@@ -131,7 +131,7 @@ func (im *InstanceMetrics) registerInstanceMetrics() {
 
 func (im *InstanceMetrics) unregisterInstanceMetrics() {
 	im.Registerer.Unregister(im.Cpu)
-	im.Registerer.Unregister(im.Crashes)
+	im.Registerer.Unregister(im.Crash)
 	im.Registerer.Unregister(im.DiskBytes)
 	im.Registerer.Unregister(im.DiskUtilization)
 	im.Registerer.Unregister(im.MemoryBytes)
@@ -263,7 +263,7 @@ func (m *AppWatcher) processLogMessage(logMessage *sonde_events.LogMessage) erro
 
 	index := logMessagePayload.Index
 	if index < len(m.MetricsForInstance) {
-		m.MetricsForInstance[index].Crashes.Inc()
+		m.MetricsForInstance[index].Crash.Inc()
 	}
 	return nil
 }

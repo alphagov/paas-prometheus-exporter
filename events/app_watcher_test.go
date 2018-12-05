@@ -2,13 +2,13 @@ package events_test
 
 import (
 	"errors"
-	"sync"
 	"fmt"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 
 	"github.com/alphagov/paas-prometheus-exporter/events"
 	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
@@ -57,9 +57,9 @@ var _ = Describe("AppWatcher", func() {
 	const METRICS_PER_INSTANCE = 8
 
 	var (
-		appWatcher     	         *events.AppWatcher
-		registerer     	         *FakeRegistry
-		streamProvider 	         *mocks.FakeAppStreamProvider
+		appWatcher               *events.AppWatcher
+		registerer               *FakeRegistry
+		streamProvider           *mocks.FakeAppStreamProvider
 		closeAppWatcherAfterTest bool
 		sondeEventChan           chan *sonde_events.Envelope
 	)
@@ -153,7 +153,7 @@ var _ = Describe("AppWatcher", func() {
 			Eventually(func() float64 { return testutil.ToFloat64(memoryUtilizationGauge) }).Should(Equal(float64(25)))
 		})
 
-		It("Increments the 'crashes' metric", func() {
+		It("Increments the 'crash' metric", func() {
 			var instanceIndex int32 = 0
 			envelopeLogMessageEventType := sonde_events.Envelope_LogMessage
 			logMessageOutMessageType := sonde_events.LogMessage_OUT
@@ -161,11 +161,11 @@ var _ = Describe("AppWatcher", func() {
 				Origin:    str("cloud_controller"),
 				EventType: &envelopeLogMessageEventType,
 				LogMessage: &sonde_events.LogMessage{
-					Message:        []byte(fmt.Sprintf(
-						"App instance exited with guid 4630f6ba-8ddc-41f1-afea-1905332d6660 payload: " +
-						"{\"instance\"=>\"bc932892-f191-4fe2-60c3-7090\", \"index\"=>%d, \"reason\"=>\"CRASHED\"," +
-						" \"exit_description\"=>\"APP/PROC/WEB: Exited with status 137\", \"crash_count\"=>1," +
-						" \"crash_timestamp\"=>1512569260335558205, \"version\"=>\"d24b0422-0c88-4692-bf52-505091890e7d\"}",
+					Message: []byte(fmt.Sprintf(
+						"App instance exited with guid 4630f6ba-8ddc-41f1-afea-1905332d6660 payload: "+
+							"{\"instance\"=>\"bc932892-f191-4fe2-60c3-7090\", \"index\"=>%d, \"reason\"=>\"CRASHED\","+
+							" \"exit_description\"=>\"APP/PROC/WEB: Exited with status 137\", \"crash_count\"=>1,"+
+							" \"crash_timestamp\"=>1512569260335558205, \"version\"=>\"d24b0422-0c88-4692-bf52-505091890e7d\"}",
 						instanceIndex),
 					),
 					MessageType:    &logMessageOutMessageType,
@@ -175,7 +175,7 @@ var _ = Describe("AppWatcher", func() {
 				},
 			}
 
-			crashCounter := &appWatcher.MetricsForInstance[instanceIndex].Crashes
+			crashCounter := &appWatcher.MetricsForInstance[instanceIndex].Crash
 
 			sondeEventChan <- &crashEnvelope
 			Eventually(func() float64 { return testutil.ToFloat64(*crashCounter) }).Should(Equal(float64(1)))
@@ -185,7 +185,7 @@ var _ = Describe("AppWatcher", func() {
 			Eventually(func() float64 { return testutil.ToFloat64(*crashCounter) }).Should(Equal(float64(2)))
 		})
 
-		It("Does not increment the 'crashes' metric if not source type API, does not have App instance exited with guid, not LogMessage_OUT or not reason CRASHED", func() {
+		It("Does not increment the 'crash' metric if not source type API, does not have App instance exited with guid, not LogMessage_OUT or not reason CRASHED", func() {
 			var instanceIndex int32 = 0
 			envelopeLogMessageEventType := sonde_events.Envelope_LogMessage
 			logMessageOutMessageType := sonde_events.LogMessage_OUT
@@ -254,7 +254,7 @@ var _ = Describe("AppWatcher", func() {
 				},
 			}
 
-			crashCounter := &appWatcher.MetricsForInstance[instanceIndex].Crashes
+			crashCounter := &appWatcher.MetricsForInstance[instanceIndex].Crash
 
 			for _, envelope := range appNonCrashEnvelopes {
 				sondeEventChan <- &envelope
