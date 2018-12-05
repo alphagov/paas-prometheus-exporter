@@ -1,11 +1,11 @@
 package events
 
 import (
-	"fmt"
 	"bytes"
 	"encoding/json"
-	"time"
+	"fmt"
 	"log"
+	"time"
 
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/client_golang/prometheus"
@@ -41,58 +41,58 @@ func NewInstanceMetrics(instanceIndex int, registerer prometheus.Registerer) (In
 		Registerer: registerer,
 		Cpu: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "cpu",
-				Help: "CPU utilisation in percent (0-100)",
+				Name:        "cpu",
+				Help:        "CPU utilisation in percent (0-100)",
 				ConstLabels: constLabels,
 			},
 		),
 		Crashes: prometheus.NewCounter(
 			prometheus.CounterOpts{
-				Name: "crashes",
-				Help: "Number of app instance crashes",
+				Name:        "crashes",
+				Help:        "Number of app instance crashes",
 				ConstLabels: constLabels,
 			},
 		),
 		DiskBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "disk_bytes",
-				Help: "Disk usage in bytes",
+				Name:        "disk_bytes",
+				Help:        "Disk usage in bytes",
 				ConstLabels: constLabels,
 			},
 		),
 		DiskUtilization: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "disk_utilization",
-				Help: "Disk space currently in use in percent (0-100)",
+				Name:        "disk_utilization",
+				Help:        "Disk space currently in use in percent (0-100)",
 				ConstLabels: constLabels,
 			},
 		),
 		MemoryBytes: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "memory_bytes",
-				Help: "Memory usage in bytes",
+				Name:        "memory_bytes",
+				Help:        "Memory usage in bytes",
 				ConstLabels: constLabels,
 			},
 		),
 		MemoryUtilization: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "memory_utilization",
-				Help: "Memory currently in use in percent (0-100)",
+				Name:        "memory_utilization",
+				Help:        "Memory currently in use in percent (0-100)",
 				ConstLabels: constLabels,
 			},
 		),
 		Requests: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
-				Name: "requests",
-				Help: "Counter of http requests for a given app instance",
+				Name:        "requests",
+				Help:        "Counter of http requests for a given app instance",
 				ConstLabels: constLabels,
 			},
 			[]string{"status_range"},
 		),
 		ResponseTime: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name: "response_time",
-				Help: "Histogram of http request time for a given app instance",
+				Name:        "response_time",
+				Help:        "Histogram of http request time for a given app instance",
 				ConstLabels: constLabels,
 			},
 			[]string{"status_range"},
@@ -161,7 +161,7 @@ func NewAppWatcher(
 	return appWatcher, nil
 }
 
-func (m *AppWatcher) Run(){
+func (m *AppWatcher) Run() {
 	msgs, errs := m.streamProvider.OpenStreamFor(m.appGuid)
 	defer m.streamProvider.Close()
 
@@ -176,10 +176,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 		select {
 		case message, ok := <-msgs:
 			if !ok {
-				// delete all instances
-				m.Close()
-				msgs = nil
-				continue
+				return fmt.Errorf("AppWatcher messages channel was closed, for guid %s", m.appGuid)
 			}
 			switch message.GetEventType() {
 			case sonde_events.Envelope_LogMessage:
@@ -194,8 +191,7 @@ func (m *AppWatcher) mainLoop(msgs <-chan *sonde_events.Envelope, errs <-chan er
 			}
 		case err, ok := <-errs:
 			if !ok {
-				errs = nil
-				continue
+				return fmt.Errorf("AppWatcher errors channel was closed, for guid %s", m.appGuid)
 			}
 			if err == nil {
 				continue
@@ -276,7 +272,7 @@ func (m *AppWatcher) processHttpStartStopMetric(httpStartStop *sonde_events.Http
 	responseDuration := time.Duration(httpStartStop.GetStopTimestamp() - httpStartStop.GetStartTimestamp()).Seconds()
 	index := int(httpStartStop.GetInstanceIndex())
 	if index < len(m.MetricsForInstance) {
-		statusRange := fmt.Sprintf("%dxx", *httpStartStop.StatusCode / 100)
+		statusRange := fmt.Sprintf("%dxx", *httpStartStop.StatusCode/100)
 		m.MetricsForInstance[index].Requests.WithLabelValues(statusRange).Inc()
 		m.MetricsForInstance[index].ResponseTime.WithLabelValues(statusRange).Observe(responseDuration)
 	}
@@ -303,7 +299,7 @@ func (m *AppWatcher) scaleTo(newInstanceCount int) error {
 		}
 	} else {
 		for i := currentInstanceCount; i > newInstanceCount; i-- {
-			m.MetricsForInstance[i - 1].unregisterInstanceMetrics()
+			m.MetricsForInstance[i-1].unregisterInstanceMetrics()
 		}
 		m.MetricsForInstance = m.MetricsForInstance[0:newInstanceCount]
 	}
