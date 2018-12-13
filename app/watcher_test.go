@@ -1,67 +1,32 @@
-package events_test
+package app_test
 
 import (
-	"errors"
+	"context"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/alphagov/paas-prometheus-exporter/app"
+
+	"github.com/alphagov/paas-prometheus-exporter/cf/mocks"
+	testmocks "github.com/alphagov/paas-prometheus-exporter/test/mocks"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	"github.com/alphagov/paas-prometheus-exporter/events"
-	"github.com/alphagov/paas-prometheus-exporter/events/mocks"
 	"github.com/cloudfoundry-community/go-cfclient"
 	sonde_events "github.com/cloudfoundry/sonde-go/events"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
-
-type FakeRegistry struct {
-	mustRegisterCount int
-	unregisterCount   int
-	sync.Mutex
-}
-
-func (m *FakeRegistry) MustRegister(...prometheus.Collector) {
-	m.Lock()
-	defer m.Unlock()
-	m.mustRegisterCount++
-}
-
-func (m *FakeRegistry) Register(prometheus.Collector) error {
-	return errors.New("Not implemented")
-}
-
-func (m *FakeRegistry) Unregister(prometheus.Collector) bool {
-	m.Lock()
-	defer m.Unlock()
-	m.unregisterCount++
-	return true
-}
-
-func (m *FakeRegistry) MustRegisterCallCount() int {
-	m.Lock()
-	defer m.Unlock()
-	return m.mustRegisterCount
-}
-
-func (m *FakeRegistry) UnregisterCallCount() int {
-	m.Lock()
-	defer m.Unlock()
-	return m.unregisterCount
-}
 
 var _ = Describe("AppWatcher", func() {
 	const METRICS_PER_INSTANCE = 8
 
 	var (
-		appWatcher               *events.AppWatcher
-		registerer               *FakeRegistry
-		streamProvider           *mocks.FakeAppStreamProvider
-		closeAppWatcherAfterTest bool
-		sondeEventChan           chan *sonde_events.Envelope
+		appWatcher     *app.Watcher
+		registerer     *testmocks.FakeRegisterer
+		streamProvider *mocks.FakeAppStreamProvider
+		sondeEventChan chan *sonde_events.Envelope
+		cancel         context.CancelFunc
 	)
 
 	BeforeEach(func() {
@@ -69,46 +34,44 @@ var _ = Describe("AppWatcher", func() {
 			{Guid: "33333333-3333-3333-3333-333333333333", Instances: 1, Name: "foo", SpaceURL: "/v2/spaces/123"},
 		}
 
-		registerer = &FakeRegistry{}
+		registerer = &testmocks.FakeRegisterer{}
 		streamProvider = &mocks.FakeAppStreamProvider{}
 		sondeEventChan = make(chan *sonde_events.Envelope, 10)
-		streamProvider.OpenStreamForReturns(sondeEventChan, nil)
+		streamProvider.StartReturns(sondeEventChan, nil)
 
-		appWatcher, _ = events.NewAppWatcher(apps[0], registerer, streamProvider)
-		closeAppWatcherAfterTest = true
+		appWatcher, _ = app.NewWatcher(apps[0], registerer, streamProvider)
+
+		var ctx context.Context
+		ctx, cancel = context.WithCancel(context.Background())
+		go appWatcher.Run(ctx)
+		Eventually(func() int {
+			return len(appWatcher.MetricsForInstance)
+		}).Should(BeNumerically(">", 0))
 	})
 
 	AfterEach(func() {
-		if closeAppWatcherAfterTest {
-			appWatcher.Close()
-		}
+		cancel()
 	})
 
 	Describe("Run", func() {
-		It("Registers metrics on startup", func() {
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
-		})
-
-		It("Unregisters metrics on close", func() {
-			closeAppWatcherAfterTest = false
-
+		It("Registers/Unregister metrics on startup and close", func() {
+			Eventually(registerer.RegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 			appWatcher.Close()
-
 			Eventually(registerer.UnregisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 		})
 
 		It("Registers more metrics when new instances are created", func() {
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
+			Eventually(registerer.RegisterCallCount).Should(Equal(METRICS_PER_INSTANCE))
 
 			appWatcher.UpdateAppInstances(2)
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
+			Eventually(registerer.RegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
 		})
 
 		It("Unregisters some metrics when old instances are deleted", func() {
 			appWatcher.UpdateAppInstances(2)
 
-			Eventually(registerer.MustRegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
+			Eventually(registerer.RegisterCallCount).Should(Equal(2 * METRICS_PER_INSTANCE))
 
 			appWatcher.UpdateAppInstances(1)
 
