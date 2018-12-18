@@ -9,8 +9,8 @@ import (
 func TestListOrgQuotas(t *testing.T) {
 	Convey("List Org Quotas", t, func() {
 		mocks := []MockRoute{
-			{"GET", "/v2/quota_definitions", listOrgQuotasPayloadPage1, "", 200},
-			{"GET", "/v2/quota_definitions_page_2", listOrgQuotasPayloadPage2, "", 200},
+			{"GET", "/v2/quota_definitions", listOrgQuotasPayloadPage1, "", 200, "", nil},
+			{"GET", "/v2/quota_definitions_page_2", listOrgQuotasPayloadPage2, "", 200, "", nil},
 		}
 		setupMultiple(mocks, t)
 		defer teardown()
@@ -43,7 +43,7 @@ func TestListOrgQuotas(t *testing.T) {
 
 func TestGetOrgQuotaByName(t *testing.T) {
 	Convey("Get Org Quota By Name", t, func() {
-		setup(MockRoute{"GET", "/v2/quota_definitions", listOrgQuotasPayloadPage2, "", 200}, t)
+		setup(MockRoute{"GET", "/v2/quota_definitions", listOrgQuotasPayloadPage2, "", 200, "q=name:default2", nil}, t)
 		defer teardown()
 		c := &Config{
 			ApiAddress: server.URL,
@@ -68,5 +68,81 @@ func TestGetOrgQuotaByName(t *testing.T) {
 		So(orgQuota.AppTaskLimit, ShouldEqual, 70)
 		So(orgQuota.TotalServiceKeys, ShouldEqual, 80)
 		So(orgQuota.TotalReservedRoutePorts, ShouldEqual, 90)
+	})
+}
+
+func TestCreateOrgQuota(t *testing.T) {
+	Convey("Create Org Quota", t, func() {
+		setup(MockRoute{"POST", "/v2/quota_definitions", orgQuotaPayload, "", 201, "", nil}, t)
+		defer teardown()
+		c := &Config{
+			ApiAddress: server.URL,
+			Token:      "foobar",
+		}
+		client, err := NewClient(c)
+		So(err, ShouldBeNil)
+
+		orgQuotaRequest := OrgQuotaRequest{
+			Name: "test-2",
+		}
+
+		orgQuota, err := client.CreateOrgQuota(orgQuotaRequest)
+		So(err, ShouldBeNil)
+
+		So(orgQuota.Name, ShouldEqual, "test-2")
+
+	})
+}
+
+func TestUpdateOrgQuota(t *testing.T) {
+	Convey("Create Update Quota", t, func() {
+		setup(MockRoute{"PUT", "/v2/quota_definitions/9ffd7c5c-d83c-4786-b399-b7bd54883977", orgQuotaPayload, "", 201, "", nil}, t)
+		defer teardown()
+		c := &Config{
+			ApiAddress: server.URL,
+			Token:      "foobar",
+		}
+		client, err := NewClient(c)
+		So(err, ShouldBeNil)
+
+		orgQuotaRequest := OrgQuotaRequest{
+			Name: "test-2",
+		}
+
+		orgQuota, err := client.UpdateOrgQuota("9ffd7c5c-d83c-4786-b399-b7bd54883977", orgQuotaRequest)
+		So(err, ShouldBeNil)
+
+		So(orgQuota.Name, ShouldEqual, "test-2")
+
+	})
+}
+
+func TestDeleteOrgQuota(t *testing.T) {
+	Convey("Delete org quota synchronously", t, func() {
+		setup(MockRoute{"DELETE", "/v2/quota_definitions/b2a35f0c-d5ad-4a59-bea7-461711d96b0d", "", "", 204, "async=false", nil}, t)
+		defer teardown()
+		c := &Config{
+			ApiAddress: server.URL,
+			Token:      "foobar",
+		}
+		client, err := NewClient(c)
+		So(err, ShouldBeNil)
+
+		err = client.DeleteOrgQuota("b2a35f0c-d5ad-4a59-bea7-461711d96b0d", false)
+		So(err, ShouldBeNil)
+	})
+
+	Convey("Delete org quota asynchronously", t, func() {
+		setup(MockRoute{"DELETE", "/v2/quota_definitions/b2a35f0c-d5ad-4a59-bea7-461711d96b0d", "", "", 202, "async=true", nil}, t)
+		defer teardown()
+		c := &Config{
+			ApiAddress: server.URL,
+			Token:      "foobar",
+		}
+		client, err := NewClient(c)
+		So(err, ShouldBeNil)
+
+		err = client.DeleteOrgQuota("b2a35f0c-d5ad-4a59-bea7-461711d96b0d", true)
+		So(err, ShouldBeNil)
 	})
 }

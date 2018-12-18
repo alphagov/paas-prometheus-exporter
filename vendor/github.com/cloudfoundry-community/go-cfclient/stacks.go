@@ -2,9 +2,10 @@ package cfclient
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/url"
+
+	"github.com/pkg/errors"
 )
 
 type StacksResponse struct {
@@ -22,6 +23,8 @@ type StacksResource struct {
 type Stack struct {
 	Guid        string `json:"guid"`
 	Name        string `json:"name"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
 	Description string `json:"description"`
 	c           *Client
 }
@@ -36,6 +39,8 @@ func (c *Client) ListStacksByQuery(query url.Values) ([]Stack, error) {
 		}
 		for _, stack := range stacksResp.Resources {
 			stack.Entity.Guid = stack.Meta.Guid
+			stack.Entity.CreatedAt = stack.Meta.CreatedAt
+			stack.Entity.UpdatedAt = stack.Meta.UpdatedAt
 			stack.Entity.c = c
 			stacks = append(stacks, stack.Entity)
 		}
@@ -56,16 +61,16 @@ func (c *Client) getStacksResponse(requestUrl string) (StacksResponse, error) {
 	r := c.NewRequest("GET", requestUrl)
 	resp, err := c.DoRequest(r)
 	if err != nil {
-		return StacksResponse{}, fmt.Errorf("Error requesting stacks %v", err)
+		return StacksResponse{}, errors.Wrap(err, "Error requesting stacks")
 	}
 	resBody, err := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
-		return StacksResponse{}, fmt.Errorf("Error reading stacks body %v", err)
+		return StacksResponse{}, errors.Wrap(err, "Error reading stacks body")
 	}
 	err = json.Unmarshal(resBody, &stacksResp)
 	if err != nil {
-		return StacksResponse{}, fmt.Errorf("Error unmarshalling stacks %v", err)
+		return StacksResponse{}, errors.Wrap(err, "Error unmarshalling stacks")
 	}
 	return stacksResp, nil
 }
