@@ -64,3 +64,21 @@ var invalidLabelsFixture = loggregator_v2.Envelope{
 	},
 	Timestamp: metricTime.UnixNano(),
 }
+
+var duplicatedLabelsFixture = loggregator_v2.Envelope{
+	SourceId: guid,
+	Tags: map[string]string{
+		"guid": "other-guid",
+	},
+	Message: &loggregator_v2.Envelope_Gauge{
+		Gauge: &loggregator_v2.Gauge{
+			Metrics: map[string]*loggregator_v2.GaugeValue{
+				"test_metric": &loggregator_v2.GaugeValue{
+					Unit:  "unit",
+					Value: 1.1,
+				},
+			},
+		},
+	},
+	Timestamp: metricTime.UnixNano(),
+}

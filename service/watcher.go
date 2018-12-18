@@ -12,6 +12,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var reservedLabels = []string{"guid", "service", "space", "organisation"}
+
 type timestampedCollector struct {
 	prometheus.Collector
 	t time.Time
@@ -114,7 +116,7 @@ func (w *Watcher) processLogCacheEvents(ctx context.Context) error {
 						Collector: prometheus.NewGauge(
 							prometheus.GaugeOpts{
 								Name:        util.SanitisePrometheusName(gaugeName),
-								ConstLabels: util.SanitisePrometheusLabels(e.Tags),
+								ConstLabels: util.SanitisePrometheusLabels(e.Tags, reservedLabels),
 							},
 						),
 					}

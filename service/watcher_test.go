@@ -64,9 +64,12 @@ var _ = Describe("ServiceWatcher", func() {
 	var start = func() {
 		go func() {
 			defer GinkgoRecover()
+			defer func() {
+				stopped <- struct{}{}
+			}()
+
 			err := serviceWatcher.Run(ctx)
 			Expect(err).ToNot(HaveOccurred())
-			stopped <- struct{}{}
 		}()
 	}
 
@@ -158,6 +161,19 @@ var _ = Describe("ServiceWatcher", func() {
 			Expect(metricFamilies[0].Metric[0].Label).To(ContainElement(label("label_b", "valueb")))
 		})
 
+		It("should add underscore to duplicated label names", func() {
+			fakeLogCacheClient.ReadReturns([]*loggregator_v2.Envelope{&duplicatedLabelsFixture}, nil)
+
+			start()
+
+			Eventually(func() int { return len(test.GetMetrics(registry)) }).Should(Equal(1))
+
+			metricFamilies := test.GetMetricFamilies(registry)
+
+			Expect(metricFamilies[0].Metric[0].Label).To(ContainElement(label("guid", guid)))
+			Expect(metricFamilies[0].Metric[0].Label).To(ContainElement(label("_guid", "other-guid")))
+		})
+
 		It("registers a metric with the correct timestamp", func() {
 			fakeLogCacheClient.ReadReturns([]*loggregator_v2.Envelope{&gaugeFixture}, nil)
 
@@ -201,9 +217,12 @@ var _ = Describe("ServiceWatcher", func() {
 
 			go func() {
 				defer GinkgoRecover()
+				defer func() {
+					stopped <- struct{}{}
+				}()
+
 				err := serviceWatcher.Run(ctx)
 				Expect(err).To(MatchError(err))
-				stopped <- struct{}{}
 			}()
 
 			Eventually(func() int { return len(test.GetMetrics(registry)) }).Should(Equal(2))
