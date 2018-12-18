@@ -20,6 +20,17 @@ type FakeClient struct {
 		result1 []cfclient.App
 		result2 error
 	}
+	ListServicesWithSpaceAndOrgStub        func() ([]cf.ServiceInstance, error)
+	listServicesWithSpaceAndOrgMutex       sync.RWMutex
+	listServicesWithSpaceAndOrgArgsForCall []struct{}
+	listServicesWithSpaceAndOrgReturns     struct {
+		result1 []cf.ServiceInstance
+		result2 error
+	}
+	listServicesWithSpaceAndOrgReturnsOnCall map[int]struct {
+		result1 []cf.ServiceInstance
+		result2 error
+	}
 	NewAppStreamProviderStub        func(appGUID string) cf.AppStreamProvider
 	newAppStreamProviderMutex       sync.RWMutex
 	newAppStreamProviderArgsForCall []struct {
@@ -61,6 +72,15 @@ type FakeClient struct {
 	}
 	dopplerEndpointReturnsOnCall map[int]struct {
 		result1 string
+	}
+	NewLogCacheClientStub        func() cf.LogCacheClient
+	newLogCacheClientMutex       sync.RWMutex
+	newLogCacheClientArgsForCall []struct{}
+	newLogCacheClientReturns     struct {
+		result1 cf.LogCacheClient
+	}
+	newLogCacheClientReturnsOnCall map[int]struct {
+		result1 cf.LogCacheClient
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -105,6 +125,49 @@ func (fake *FakeClient) ListAppsWithSpaceAndOrgReturnsOnCall(i int, result1 []cf
 	}
 	fake.listAppsWithSpaceAndOrgReturnsOnCall[i] = struct {
 		result1 []cfclient.App
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeClient) ListServicesWithSpaceAndOrg() ([]cf.ServiceInstance, error) {
+	fake.listServicesWithSpaceAndOrgMutex.Lock()
+	ret, specificReturn := fake.listServicesWithSpaceAndOrgReturnsOnCall[len(fake.listServicesWithSpaceAndOrgArgsForCall)]
+	fake.listServicesWithSpaceAndOrgArgsForCall = append(fake.listServicesWithSpaceAndOrgArgsForCall, struct{}{})
+	fake.recordInvocation("ListServicesWithSpaceAndOrg", []interface{}{})
+	fake.listServicesWithSpaceAndOrgMutex.Unlock()
+	if fake.ListServicesWithSpaceAndOrgStub != nil {
+		return fake.ListServicesWithSpaceAndOrgStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.listServicesWithSpaceAndOrgReturns.result1, fake.listServicesWithSpaceAndOrgReturns.result2
+}
+
+func (fake *FakeClient) ListServicesWithSpaceAndOrgCallCount() int {
+	fake.listServicesWithSpaceAndOrgMutex.RLock()
+	defer fake.listServicesWithSpaceAndOrgMutex.RUnlock()
+	return len(fake.listServicesWithSpaceAndOrgArgsForCall)
+}
+
+func (fake *FakeClient) ListServicesWithSpaceAndOrgReturns(result1 []cf.ServiceInstance, result2 error) {
+	fake.ListServicesWithSpaceAndOrgStub = nil
+	fake.listServicesWithSpaceAndOrgReturns = struct {
+		result1 []cf.ServiceInstance
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeClient) ListServicesWithSpaceAndOrgReturnsOnCall(i int, result1 []cf.ServiceInstance, result2 error) {
+	fake.ListServicesWithSpaceAndOrgStub = nil
+	if fake.listServicesWithSpaceAndOrgReturnsOnCall == nil {
+		fake.listServicesWithSpaceAndOrgReturnsOnCall = make(map[int]struct {
+			result1 []cf.ServiceInstance
+			result2 error
+		})
+	}
+	fake.listServicesWithSpaceAndOrgReturnsOnCall[i] = struct {
+		result1 []cf.ServiceInstance
 		result2 error
 	}{result1, result2}
 }
@@ -283,11 +346,53 @@ func (fake *FakeClient) DopplerEndpointReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
+func (fake *FakeClient) NewLogCacheClient() cf.LogCacheClient {
+	fake.newLogCacheClientMutex.Lock()
+	ret, specificReturn := fake.newLogCacheClientReturnsOnCall[len(fake.newLogCacheClientArgsForCall)]
+	fake.newLogCacheClientArgsForCall = append(fake.newLogCacheClientArgsForCall, struct{}{})
+	fake.recordInvocation("NewLogCacheClient", []interface{}{})
+	fake.newLogCacheClientMutex.Unlock()
+	if fake.NewLogCacheClientStub != nil {
+		return fake.NewLogCacheClientStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.newLogCacheClientReturns.result1
+}
+
+func (fake *FakeClient) NewLogCacheClientCallCount() int {
+	fake.newLogCacheClientMutex.RLock()
+	defer fake.newLogCacheClientMutex.RUnlock()
+	return len(fake.newLogCacheClientArgsForCall)
+}
+
+func (fake *FakeClient) NewLogCacheClientReturns(result1 cf.LogCacheClient) {
+	fake.NewLogCacheClientStub = nil
+	fake.newLogCacheClientReturns = struct {
+		result1 cf.LogCacheClient
+	}{result1}
+}
+
+func (fake *FakeClient) NewLogCacheClientReturnsOnCall(i int, result1 cf.LogCacheClient) {
+	fake.NewLogCacheClientStub = nil
+	if fake.newLogCacheClientReturnsOnCall == nil {
+		fake.newLogCacheClientReturnsOnCall = make(map[int]struct {
+			result1 cf.LogCacheClient
+		})
+	}
+	fake.newLogCacheClientReturnsOnCall[i] = struct {
+		result1 cf.LogCacheClient
+	}{result1}
+}
+
 func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.listAppsWithSpaceAndOrgMutex.RLock()
 	defer fake.listAppsWithSpaceAndOrgMutex.RUnlock()
+	fake.listServicesWithSpaceAndOrgMutex.RLock()
+	defer fake.listServicesWithSpaceAndOrgMutex.RUnlock()
 	fake.newAppStreamProviderMutex.RLock()
 	defer fake.newAppStreamProviderMutex.RUnlock()
 	fake.getTokenMutex.RLock()
@@ -296,6 +401,8 @@ func (fake *FakeClient) Invocations() map[string][][]interface{} {
 	defer fake.refreshAuthTokenMutex.RUnlock()
 	fake.dopplerEndpointMutex.RLock()
 	defer fake.dopplerEndpointMutex.RUnlock()
+	fake.newLogCacheClientMutex.RLock()
+	defer fake.newLogCacheClientMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

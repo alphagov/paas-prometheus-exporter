@@ -14,6 +14,11 @@ func GetMetrics(registry *prometheus.Registry) []*dto.Metric {
 	return metrics
 }
 
+func GetMetricFamilies(registry *prometheus.Registry) []*dto.MetricFamily {
+	metricsFamilies, _ := registry.Gather()
+	return metricsFamilies
+}
+
 func MetricHasLabels(metric *dto.Metric, labels map[string]string) bool {
 	actualLabels := make(map[string]string)
 	for _, pair := range metric.Label {
