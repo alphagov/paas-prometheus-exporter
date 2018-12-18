@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	version            = "0.0.3"
+	version            = "0.0.4"
 	apiEndpoint        = kingpin.Flag("api-endpoint", "API endpoint").Required().OverrideDefaultFromEnvar("API_ENDPOINT").String()
 	logCacheEndpoint   = kingpin.Flag("logcache-endpoint", "LogCache endpoint").Default("").OverrideDefaultFromEnvar("LOGCACHE_ENDPOINT").String()
 	username           = kingpin.Flag("username", "UAA username.").Default("").OverrideDefaultFromEnvar("USERNAME").String()
