@@ -18,11 +18,11 @@ var gaugeFixture = loggregator_v2.Envelope{
 		Gauge: &loggregator_v2.Gauge{
 			Metrics: map[string]*loggregator_v2.GaugeValue{
 				"test_metric": &loggregator_v2.GaugeValue{
-					Unit:  "test_unit",
+					Unit:  "seconds",
 					Value: 1.1,
 				},
 				"test_metric_2": &loggregator_v2.GaugeValue{
-					Unit:  "test_unit_2",
+					Unit:  "bytes",
 					Value: 2.1,
 				},
 			},
@@ -37,7 +37,7 @@ var invalidNameFixture = loggregator_v2.Envelope{
 		Gauge: &loggregator_v2.Gauge{
 			Metrics: map[string]*loggregator_v2.GaugeValue{
 				"invalid-name": &loggregator_v2.GaugeValue{
-					Unit:  "unit",
+					Unit:  "seconds",
 					Value: 1.1,
 				},
 			},
@@ -56,7 +56,7 @@ var invalidLabelsFixture = loggregator_v2.Envelope{
 		Gauge: &loggregator_v2.Gauge{
 			Metrics: map[string]*loggregator_v2.GaugeValue{
 				"test_metric": &loggregator_v2.GaugeValue{
-					Unit:  "unit",
+					Unit:  "seconds",
 					Value: 1.1,
 				},
 			},
@@ -74,7 +74,7 @@ var duplicatedLabelsFixture = loggregator_v2.Envelope{
 		Gauge: &loggregator_v2.Gauge{
 			Metrics: map[string]*loggregator_v2.GaugeValue{
 				"test_metric": &loggregator_v2.GaugeValue{
-					Unit:  "unit",
+					Unit:  "seconds",
 					Value: 1.1,
 				},
 			},
@@ -97,7 +97,22 @@ var excludedLabelsFixture = loggregator_v2.Envelope{
 		Gauge: &loggregator_v2.Gauge{
 			Metrics: map[string]*loggregator_v2.GaugeValue{
 				"test_metric": &loggregator_v2.GaugeValue{
-					Unit:  "unit",
+					Unit:  "seconds",
+					Value: 1.1,
+				},
+			},
+		},
+	},
+	Timestamp: metricTime.UnixNano(),
+}
+
+var invalidUnitFixture = loggregator_v2.Envelope{
+	SourceId: guid,
+	Message: &loggregator_v2.Envelope_Gauge{
+		Gauge: &loggregator_v2.Gauge{
+			Metrics: map[string]*loggregator_v2.GaugeValue{
+				"test_metric": &loggregator_v2.GaugeValue{
+					Unit:  "unknown unit",
 					Value: 1.1,
 				},
 			},

@@ -16,6 +16,8 @@ var reservedLabels = []string{"guid", "service", "space", "organisation"}
 
 var excludedLabels = []string{"deployment", "index", "ip", "job", "origin"}
 
+var validUnits = []string{"percent", "byte", "bytes", "s", "second", "seconds", "ms"}
+
 type timestampedCollector struct {
 	prometheus.Collector
 	t time.Time
@@ -109,9 +111,16 @@ func (w *Watcher) processLogCacheEvents(ctx context.Context) error {
 		if g := e.GetGauge(); g != nil {
 			for name, gaugeMetric := range g.GetMetrics() {
 				gaugeName := name
+
 				if gaugeMetric.GetUnit() != "" {
-					gaugeName = gaugeName + "_" + gaugeMetric.GetUnit()
+					for _, validUnit := range validUnits {
+						if validUnit == gaugeMetric.GetUnit() {
+							gaugeName = gaugeName + "_" + gaugeMetric.GetUnit()
+							break
+						}
+					}
 				}
+
 				m, ok := w.metricsForInstance[gaugeName]
 				if !ok {
 					m = &timestampedCollector{

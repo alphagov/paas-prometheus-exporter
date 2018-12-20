@@ -106,7 +106,7 @@ var _ = Describe("ServiceWatcher", func() {
 
 			Expect(metricFamilies).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Name": PointTo(Equal("test_metric_test_unit")),
+					"Name": PointTo(Equal("test_metric_seconds")),
 					"Help": PointTo(Equal("")),
 					"Type": PointTo(Equal(dto.MetricType_GAUGE)),
 					"Metric": ConsistOf(
@@ -120,7 +120,7 @@ var _ = Describe("ServiceWatcher", func() {
 					),
 				})),
 				PointTo(MatchFields(IgnoreExtras, Fields{
-					"Name": PointTo(Equal("test_metric_2_test_unit_2")),
+					"Name": PointTo(Equal("test_metric_2_bytes")),
 					"Help": PointTo(Equal("")),
 					"Type": PointTo(Equal(dto.MetricType_GAUGE)),
 					"Metric": ConsistOf(
@@ -145,7 +145,7 @@ var _ = Describe("ServiceWatcher", func() {
 
 			metricFamilies := test.GetMetricFamilies(registry)
 
-			Expect(metricFamilies[0].Name).To(PointTo(Equal("invalid_name_unit")))
+			Expect(metricFamilies[0].Name).To(PointTo(Equal("invalid_name_seconds")))
 		})
 
 		It("sanitises the metric labels", func() {
@@ -193,6 +193,18 @@ var _ = Describe("ServiceWatcher", func() {
 			Expect(keys).ToNot(ContainElement("ip"))
 			Expect(keys).ToNot(ContainElement("job"))
 			Expect(keys).ToNot(ContainElement("origin"))
+		})
+
+		It("should only add valid units as a suffic", func() {
+			fakeLogCacheClient.ReadReturns([]*loggregator_v2.Envelope{&invalidUnitFixture}, nil)
+
+			start()
+
+			Eventually(func() int { return len(test.GetMetrics(registry)) }).Should(Equal(1))
+
+			metricFamilies := test.GetMetricFamilies(registry)
+
+			Expect(*metricFamilies[0].Name).To(Equal("test_metric"))
 		})
 
 		It("registers a metric with the correct timestamp", func() {
