@@ -82,3 +82,26 @@ var duplicatedLabelsFixture = loggregator_v2.Envelope{
 	},
 	Timestamp: metricTime.UnixNano(),
 }
+
+var excludedLabelsFixture = loggregator_v2.Envelope{
+	SourceId: guid,
+	Tags: map[string]string{
+		"deployment": "test-deployment",
+		"index":      "01234567-0123-0123-0123-01234567890a",
+		"ip":         "1.2.3.4",
+		"job":        "test_job",
+		"origin":     "test-origin",
+		"source":     "test-source",
+	},
+	Message: &loggregator_v2.Envelope_Gauge{
+		Gauge: &loggregator_v2.Gauge{
+			Metrics: map[string]*loggregator_v2.GaugeValue{
+				"test_metric": &loggregator_v2.GaugeValue{
+					Unit:  "unit",
+					Value: 1.1,
+				},
+			},
+		},
+	},
+	Timestamp: metricTime.UnixNano(),
+}

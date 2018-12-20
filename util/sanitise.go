@@ -22,13 +22,27 @@ func SanitisePrometheusName(name string) string {
 	return name
 }
 
-func SanitisePrometheusLabels(labels map[string]string, reservedLabels []string) map[string]string {
+func SanitisePrometheusLabels(labels map[string]string, reservedLabels []string, excludedLabels []string) map[string]string {
 	ret := make(map[string]string, len(labels))
 	for name, value := range labels {
 		name = SanitisePrometheusName(name)
+
+		isExcluded := false
+		for _, excludedLabel := range excludedLabels {
+			if excludedLabel == name {
+				isExcluded = true
+				break
+			}
+		}
+
+		if isExcluded {
+			continue
+		}
+
 		for _, reservedLabel := range reservedLabels {
 			if reservedLabel == name {
 				name = "_" + name
+				break
 			}
 		}
 

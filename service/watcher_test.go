@@ -174,6 +174,27 @@ var _ = Describe("ServiceWatcher", func() {
 			Expect(metricFamilies[0].Metric[0].Label).To(ContainElement(label("_guid", "other-guid")))
 		})
 
+		It("should not include any excluded labels", func() {
+			fakeLogCacheClient.ReadReturns([]*loggregator_v2.Envelope{&excludedLabelsFixture}, nil)
+
+			start()
+
+			Eventually(func() int { return len(test.GetMetrics(registry)) }).Should(Equal(1))
+
+			metricFamilies := test.GetMetricFamilies(registry)
+
+			keys := []string{}
+			for _, labelPair := range metricFamilies[0].Metric[0].Label {
+				keys = append(keys, *labelPair.Name)
+			}
+
+			Expect(keys).ToNot(ContainElement("deployment"))
+			Expect(keys).ToNot(ContainElement("index"))
+			Expect(keys).ToNot(ContainElement("ip"))
+			Expect(keys).ToNot(ContainElement("job"))
+			Expect(keys).ToNot(ContainElement("origin"))
+		})
+
 		It("registers a metric with the correct timestamp", func() {
 			fakeLogCacheClient.ReadReturns([]*loggregator_v2.Envelope{&gaugeFixture}, nil)
 
