@@ -10,20 +10,21 @@
 // resources based on an authorization previously arranged with the authorization
 // server.
 //
-// See http://tools.ietf.org/html/draft-ietf-oauth-v2-31#section-4.4
+// See https://tools.ietf.org/html/rfc6749#section-4.4
 package clientcredentials // import "golang.org/x/oauth2/clientcredentials"
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/internal"
 )
 
-// Client Credentials Config describes a 2-legged OAuth2 flow, with both the
+// Config describes a 2-legged OAuth2 flow, with both the
 // client application information and the server's endpoint URLs.
 type Config struct {
 	// ClientID is the application's ID.
@@ -38,19 +39,25 @@ type Config struct {
 
 	// Scope specifies optional requested permissions.
 	Scopes []string
+
+	// EndpointParams specifies additional parameters for requests to the token endpoint.
+	EndpointParams url.Values
 }
 
 // Token uses client credentials to retrieve a token.
-// The HTTP client to use is derived from the context.
-// If nil, http.DefaultClient is used.
+//
+// The provided context optionally controls which HTTP client is used. See the oauth2.HTTPClient variable.
 func (c *Config) Token(ctx context.Context) (*oauth2.Token, error) {
 	return c.TokenSource(ctx).Token()
 }
 
 // Client returns an HTTP client using the provided token.
-// The token will auto-refresh as necessary. The underlying
-// HTTP transport will be obtained using the provided context.
-// The returned client and its Transport should not be modified.
+// The token will auto-refresh as necessary.
+//
+// The provided context optionally controls which HTTP client
+// is returned. See the oauth2.HTTPClient variable.
+//
+// The returned Client and its Transport should not be modified.
 func (c *Config) Client(ctx context.Context) *http.Client {
 	return oauth2.NewClient(ctx, c.TokenSource(ctx))
 }
@@ -76,11 +83,23 @@ type tokenSource struct {
 // Token refreshes the token by using a new client credentials request.
 // tokens received this way do not include a refresh token
 func (c *tokenSource) Token() (*oauth2.Token, error) {
-	tk, err := internal.RetrieveToken(c.ctx, c.conf.ClientID, c.conf.ClientSecret, c.conf.TokenURL, url.Values{
+	v := url.Values{
 		"grant_type": {"client_credentials"},
-		"scope":      internal.CondVal(strings.Join(c.conf.Scopes, " ")),
-	})
+	}
+	if len(c.conf.Scopes) > 0 {
+		v.Set("scope", strings.Join(c.conf.Scopes, " "))
+	}
+	for k, p := range c.conf.EndpointParams {
+		if _, ok := v[k]; ok {
+			return nil, fmt.Errorf("oauth2: cannot overwrite parameter %q", k)
+		}
+		v[k] = p
+	}
+	tk, err := internal.RetrieveToken(c.ctx, c.conf.ClientID, c.conf.ClientSecret, c.conf.TokenURL, v)
 	if err != nil {
+		if rErr, ok := err.(*internal.RetrieveError); ok {
+			return nil, (*oauth2.RetrieveError)(rErr)
+		}
 		return nil, err
 	}
 	t := &oauth2.Token{

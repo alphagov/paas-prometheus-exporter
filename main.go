@@ -1,43 +1,69 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
-	"github.com/alphagov/paas-prometheus-exporter/exporter"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/alphagov/paas-prometheus-exporter/app"
+	"github.com/alphagov/paas-prometheus-exporter/cf"
+	"github.com/alphagov/paas-prometheus-exporter/service"
+
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
-	version            = "0.0.3"
-	apiEndpoint        = kingpin.Flag("api-endpoint", "API endpoint").Default("https://api.10.244.0.34.xip.io").OverrideDefaultFromEnvar("API_ENDPOINT").String()
+	version            = "0.0.4"
+	apiEndpoint        = kingpin.Flag("api-endpoint", "API endpoint").Required().OverrideDefaultFromEnvar("API_ENDPOINT").String()
+	logCacheEndpoint   = kingpin.Flag("logcache-endpoint", "LogCache endpoint").Default("").OverrideDefaultFromEnvar("LOGCACHE_ENDPOINT").String()
 	username           = kingpin.Flag("username", "UAA username.").Default("").OverrideDefaultFromEnvar("USERNAME").String()
 	password           = kingpin.Flag("password", "UAA password.").Default("").OverrideDefaultFromEnvar("PASSWORD").String()
 	clientID           = kingpin.Flag("client-id", "UAA client ID.").Default("").OverrideDefaultFromEnvar("CLIENT_ID").String()
 	clientSecret       = kingpin.Flag("client-secret", "UAA client secret.").Default("").OverrideDefaultFromEnvar("CLIENT_SECRET").String()
 	updateFrequency    = kingpin.Flag("update-frequency", "The time in seconds, that takes between each apps update call.").Default("300").OverrideDefaultFromEnvar("UPDATE_FREQUENCY").Int64()
+	scrapeInterval     = kingpin.Flag("scrape-interval", "The time in seconds, that takes between Prometheus scrapes.").Default("60").OverrideDefaultFromEnvar("SCRAPE_INTERVAL").Int64()
 	prometheusBindPort = kingpin.Flag("prometheus-bind-port", "The port to bind to for prometheus metrics.").Default("8080").OverrideDefaultFromEnvar("PORT").Int()
 )
 
+type ServiceDiscovery interface {
+	Start()
+	Stop()
+}
+
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+		defer signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+		<-sigChan
+		cancel()
+	}()
+
 	kingpin.Parse()
 
-	config := &cfclient.Config{
-		ApiAddress:   *apiEndpoint,
-		Username:     *username,
-		Password:     *password,
-		ClientID:     *clientID,
-		ClientSecret: *clientSecret,
+	if *logCacheEndpoint == "" {
+		*logCacheEndpoint = strings.Replace(*apiEndpoint, "api.", "log-cache.", 1)
 	}
 
-	cf, err := cfclient.NewClient(config)
-	if err != nil {
-		log.Fatal(err)
+	if *updateFrequency < 60 {
+		log.Fatal("The update frequency can not be less than 1 minute")
+	}
+
+	if *scrapeInterval < 60 {
+		log.Fatal("The scrape interval can not be less than 1 minute")
 	}
 
 	build_info := prometheus.NewGauge(
@@ -52,10 +78,64 @@ func main() {
 	build_info.Set(1)
 	prometheus.DefaultRegisterer.MustRegister(build_info)
 
-	exporter_cf := exporter.NewCFClient(cf)
+	config := &cfclient.Config{
+		ApiAddress:   *apiEndpoint,
+		Username:     *username,
+		Password:     *password,
+		ClientID:     *clientID,
+		ClientSecret: *clientSecret,
+	}
+	client, err := cf.NewClient(config, *logCacheEndpoint)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	e := exporter.New(exporter_cf, exporter.NewWatcherManager(config))
-	go e.Start(time.Duration(*updateFrequency) * time.Second)
+	errChan := make(chan error, 1)
+
+	appDiscovery := app.NewDiscovery(
+		client,
+		prometheus.DefaultRegisterer,
+		time.Duration(*updateFrequency)*time.Second,
+	)
+
+	appDiscovery.Start(ctx, errChan)
+
+	serviceDiscovery := service.NewDiscovery(
+		client,
+		prometheus.DefaultRegisterer,
+		time.Duration(*updateFrequency)*time.Second,
+		time.Duration(*scrapeInterval)*time.Second,
+	)
+
+	serviceDiscovery.Start(ctx, errChan)
+
+	server := &http.Server{
+		Addr: fmt.Sprintf(":%d", *prometheusBindPort),
+	}
 	http.Handle("/metrics", promhttp.Handler())
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", *prometheusBindPort), nil))
+
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	for {
+		select {
+		case <-errChan:
+			log.Println(err)
+			cancel()
+		case <-ctx.Done():
+			log.Println("exiting")
+			shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
+			defer shutdownCancel()
+
+			err := server.Shutdown(shutdownCtx)
+			if err != nil {
+				log.Println(err)
+			}
+			return
+		}
+	}
 }
