@@ -59,6 +59,8 @@ Refer to the [PaaS Technical Documentation](https://docs.cloud.service.gov.uk/mo
 |Update frequency|update-frequency|UPDATE_FREQUENCY|300|The time in seconds, that takes between each apps update call|
 |Scrape interval|scrape-interval|SCRAPE_INTERVAL|60|Scrape interval in seconds. Set this to the same value as the Prometheus scrape interval. The service metrics will be refreshed using the same interval|
 |Log-cache endpoint|logcache-endpoint|LOGCACHE_ENDPOINT|`https://log-cache.<PaaS system domain>`|Usually it's unnecessary to override this|
+|Basic-auth username|auth-username|AUTH_USERNAME|Apply basic auth protection to the /metrics endpoint|Leave this field blank to disable basic auth
+|Basic-auth password|auth-password|AUTH_PASSWORD||
 
 ## Development
 
