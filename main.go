@@ -16,6 +16,7 @@ import (
 	"github.com/alphagov/paas-prometheus-exporter/app"
 	"github.com/alphagov/paas-prometheus-exporter/cf"
 	"github.com/alphagov/paas-prometheus-exporter/service"
+	"github.com/alphagov/paas-prometheus-exporter/util"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,6 +34,8 @@ var (
 	updateFrequency    = kingpin.Flag("update-frequency", "The time in seconds, that takes between each apps update call.").Default("300").OverrideDefaultFromEnvar("UPDATE_FREQUENCY").Int64()
 	scrapeInterval     = kingpin.Flag("scrape-interval", "The time in seconds, that takes between Prometheus scrapes.").Default("60").OverrideDefaultFromEnvar("SCRAPE_INTERVAL").Int64()
 	prometheusBindPort = kingpin.Flag("prometheus-bind-port", "The port to bind to for prometheus metrics.").Default("8080").OverrideDefaultFromEnvar("PORT").Int()
+	auth_username      = kingpin.Flag("auth-username", "HTTP basic auth username; leave blank to disable basic auth").Default("").OverrideDefaultFromEnvar("AUTH_USERNAME").String()
+	auth_password      = kingpin.Flag("auth-password", "HTTP basic auth password").Default("").OverrideDefaultFromEnvar("AUTH_PASSWORD").String()
 )
 
 type ServiceDiscovery interface {
@@ -112,7 +115,14 @@ func main() {
 	server := &http.Server{
 		Addr: fmt.Sprintf(":%d", *prometheusBindPort),
 	}
-	http.Handle("/metrics", promhttp.Handler())
+
+	promHandler := promhttp.Handler()
+
+	if *auth_username != "" {
+	    http.HandleFunc("/metrics", util.BasicAuthHandler(*auth_username, *auth_password, "metrics", promHandler.ServeHTTP))
+	} else {
+	    http.Handle("/metrics", promHandler)
+	}
 
 	go func() {
 		err := server.ListenAndServe()
