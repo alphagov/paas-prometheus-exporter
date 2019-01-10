@@ -112,17 +112,7 @@ func main() {
 
 	serviceDiscovery.Start(ctx, errChan)
 
-	server := &http.Server{
-		Addr: fmt.Sprintf(":%d", *prometheusBindPort),
-	}
-
-	promHandler := promhttp.Handler()
-
-	if *authUsername != "" {
-		promHandler = util.BasicAuthHandler(*authUsername, *authPassword, "metrics", promHandler)
-	}
-
-	http.Handle("/metrics", promHandler)
+	server := buildHTTPServer(*prometheusBindPort, promhttp.Handler(), *authUsername, *authPassword)
 
 	go func() {
 		err := server.ListenAndServe()
@@ -148,4 +138,18 @@ func main() {
 			return
 		}
 	}
+}
+
+func buildHTTPServer(port int, promHandler http.Handler, authUsername, authPassword string) *http.Server {
+	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promHandler)
+	server.Handler = mux
+
+	if authUsername != "" {
+		server.Handler = util.BasicAuthHandler(authUsername, authPassword, "metrics", server.Handler)
+	}
+
+	return server
 }
