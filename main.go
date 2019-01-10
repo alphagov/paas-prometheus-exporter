@@ -118,11 +118,11 @@ func main() {
 
 	promHandler := promhttp.Handler()
 
-	if *auth_username != "" {
-		http.Handle("/metrics", util.BasicAuthHandler(*authUsername, *authPassword, "metrics", promHandler))
-	} else {
-		http.Handle("/metrics", promHandler)
+	if *authUsername != "" {
+		promHandler = util.BasicAuthHandler(*authUsername, *authPassword, "metrics", promHandler)
 	}
+
+	http.Handle("/metrics", promHandler)
 
 	go func() {
 		err := server.ListenAndServe()

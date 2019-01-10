@@ -5,23 +5,36 @@ import (
 	"net/http"
 )
 
-func BasicAuthHandler(user, pass, realm string, next http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if checkBasicAuth(r, user, pass) {
-			next.ServeHTTP(w, r)
-			return
-		}
+type basicAuth struct {
+	username string
+	password string
+	realm    string
+	next     http.Handler
+}
 
-		w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, realm))
-		w.WriteHeader(401)
-		w.Write([]byte("401 Unauthorized\n"))
+func BasicAuthHandler(user, pass, realm string, next http.Handler) http.Handler {
+	return &basicAuth{
+		username: user,
+		password: pass,
+		realm:    realm,
+		next:     next,
 	}
 }
 
-func checkBasicAuth(r *http.Request, user, pass string) bool {
+func (b *basicAuth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if b.checkBasicAuth(r) {
+		b.next.ServeHTTP(w, r)
+		return
+	}
+
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s"`, b.realm))
+	http.Error(w, "401 Unauthorized.", http.StatusUnauthorized)
+}
+
+func (b *basicAuth) checkBasicAuth(r *http.Request) bool {
 	u, p, ok := r.BasicAuth()
 	if !ok {
 		return false
 	}
-	return u == user && p == pass
+	return u == b.username && p == b.password
 }
