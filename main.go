@@ -118,8 +118,8 @@ func main() {
 
 	promHandler := promhttp.Handler()
 
-	if *authUsername != "" {
-		http.HandleFunc("/metrics", util.BasicAuthHandler(*authUsername, *authPassword, "metrics", promHandler.ServeHTTP))
+	if *auth_username != "" {
+		http.Handle("/metrics", util.BasicAuthHandler(*authUsername, *authPassword, "metrics", promHandler))
 	} else {
 		http.Handle("/metrics", promHandler)
 	}

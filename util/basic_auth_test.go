@@ -29,7 +29,7 @@ var _ = Describe("Basic auth handler", func() {
 		backend = ghttp.NewUnstartedServer()
 		backend.AllowUnhandledRequests = true
 		backend.UnhandledRequestStatusCode = http.StatusOK
-		authHandler = util.BasicAuthHandler(username, password, realm, backend.ServeHTTP)
+		authHandler = util.BasicAuthHandler(username, password, realm, backend)
 		req = httptest.NewRequest("GET", "http://www.example.com/", nil)
 		response = httptest.NewRecorder()
 	})

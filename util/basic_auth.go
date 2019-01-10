@@ -5,10 +5,10 @@ import (
 	"net/http"
 )
 
-func BasicAuthHandler(user, pass, realm string, next http.HandlerFunc) http.HandlerFunc {
+func BasicAuthHandler(user, pass, realm string, next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if checkBasicAuth(r, user, pass) {
-			next(w, r)
+			next.ServeHTTP(w, r)
 			return
 		}
 
