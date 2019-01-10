@@ -16,6 +16,7 @@ import (
 	"github.com/alphagov/paas-prometheus-exporter/app"
 	"github.com/alphagov/paas-prometheus-exporter/cf"
 	"github.com/alphagov/paas-prometheus-exporter/service"
+	"github.com/alphagov/paas-prometheus-exporter/util"
 
 	"github.com/cloudfoundry-community/go-cfclient"
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,6 +34,8 @@ var (
 	updateFrequency    = kingpin.Flag("update-frequency", "The time in seconds, that takes between each apps update call.").Default("300").OverrideDefaultFromEnvar("UPDATE_FREQUENCY").Int64()
 	scrapeInterval     = kingpin.Flag("scrape-interval", "The time in seconds, that takes between Prometheus scrapes.").Default("60").OverrideDefaultFromEnvar("SCRAPE_INTERVAL").Int64()
 	prometheusBindPort = kingpin.Flag("prometheus-bind-port", "The port to bind to for prometheus metrics.").Default("8080").OverrideDefaultFromEnvar("PORT").Int()
+	authUsername       = kingpin.Flag("auth-username", "HTTP basic auth username; leave blank to disable basic auth").Default("").OverrideDefaultFromEnvar("AUTH_USERNAME").String()
+	authPassword       = kingpin.Flag("auth-password", "HTTP basic auth password").Default("").OverrideDefaultFromEnvar("AUTH_PASSWORD").String()
 )
 
 type ServiceDiscovery interface {
@@ -109,10 +112,7 @@ func main() {
 
 	serviceDiscovery.Start(ctx, errChan)
 
-	server := &http.Server{
-		Addr: fmt.Sprintf(":%d", *prometheusBindPort),
-	}
-	http.Handle("/metrics", promhttp.Handler())
+	server := buildHTTPServer(*prometheusBindPort, promhttp.Handler(), *authUsername, *authPassword)
 
 	go func() {
 		err := server.ListenAndServe()
@@ -138,4 +138,18 @@ func main() {
 			return
 		}
 	}
+}
+
+func buildHTTPServer(port int, promHandler http.Handler, authUsername, authPassword string) *http.Server {
+	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promHandler)
+	server.Handler = mux
+
+	if authUsername != "" {
+		server.Handler = util.BasicAuthHandler(authUsername, authPassword, "metrics", server.Handler)
+	}
+
+	return server
 }
