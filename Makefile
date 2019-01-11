@@ -8,11 +8,8 @@ help:
 test: unit ## Run tests
 
 .PHONY: unit
-unit: $(GOPATH)/bin/ginkgo ## Run unit tests
-	ginkgo -r
-
-$(GOPATH)/bin/ginkgo:
-	cd vendor/github.com/onsi/ginkgo/ginkgo && go install .
+unit: ## Run unit tests
+	go test -v ./...
 
 .PHONY: generate
 generate: ## Generate the test mocks
