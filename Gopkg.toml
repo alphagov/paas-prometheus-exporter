@@ -20,6 +20,10 @@
 #  name = "github.com/x/y"
 #  version = "2.4.0"
 
+[prune]
+  go-tests = true
+  non-go = true
+  unused-packages = true
 
 [[constraint]]
   name = "github.com/cloudfoundry-community/go-cfclient"
@@ -32,9 +36,11 @@
 
 [[constraint]]
   name = "github.com/onsi/ginkgo"
+  version = "1.7.0"
 
 [[constraint]]
   name = "github.com/onsi/gomega"
+  version = "1.4.3"
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
@@ -43,3 +49,8 @@
 [[constraint]]
   name = "gopkg.in/alecthomas/kingpin.v2"
   version = "2.0.8"
+
+# Necessary to work around https://github.com/golang/dep/issues/1799
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "gopkg.in/fsnotify/fsnotify.v1"
