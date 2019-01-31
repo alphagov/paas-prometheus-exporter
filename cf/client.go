@@ -143,7 +143,8 @@ func (l *logCacheHTTPClient) Do(req *http.Request) (*http.Response, error) {
 		return nil, fmt.Errorf("failed to get token: %s", err)
 	}
 
-	req.Header.Set("Authorization", token.AccessToken)
+	authHeader := fmt.Sprintf("bearer %s", token.AccessToken)
+	req.Header.Set("Authorization", authHeader)
 
 	return l.client.Do(req)
 }
