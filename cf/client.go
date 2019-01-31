@@ -127,7 +127,7 @@ func (c *client) NewLogCacheClient() LogCacheClient {
 	return logcache.NewClient(c.logCacheEndpoint,
 		logcache.WithHTTPClient(&logCacheHTTPClient{
 			tokenSource: c.cfClient.Config.TokenSource,
-			client:      http.DefaultClient,
+			client:      c.cfClient.Config.HttpClient,
 		}),
 	)
 }
