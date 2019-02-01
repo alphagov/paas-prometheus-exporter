@@ -4,6 +4,10 @@ This application consumes application and service metrics from Cloud Foundry. Al
 
 The application will get metrics for all apps and services that the user has access to.
 
+To use paas-prometheus-exporter with GOV.UK PaaS, see [Use the PaaS Prometheus exporter app](https://docs.cloud.service.gov.uk/monitoring_apps.html#use-the-paas-prometheus-exporter-app) in the documentation.
+
+If you use StatsD rather than Prometheus see [alphagov/paas-metric-exporter](https://github.com/alphagov/paas-metric-exporter).
+
 ## How metrics are collected
 
 The applications and services are automatically discovered using the Cloud Foundry API every `update-frequency` seconds. This means it might take a little time while a new application or service's metrics are exposed.
