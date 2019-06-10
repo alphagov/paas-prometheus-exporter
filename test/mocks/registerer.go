@@ -9,6 +9,11 @@ import (
 )
 
 type FakeRegisterer struct {
+	MustRegisterStub        func(...prometheus.Collector)
+	mustRegisterMutex       sync.RWMutex
+	mustRegisterArgsForCall []struct {
+		arg1 []prometheus.Collector
+	}
 	RegisterStub        func(prometheus.Collector) error
 	registerMutex       sync.RWMutex
 	registerArgsForCall []struct {
@@ -19,11 +24,6 @@ type FakeRegisterer struct {
 	}
 	registerReturnsOnCall map[int]struct {
 		result1 error
-	}
-	MustRegisterStub        func(...prometheus.Collector)
-	mustRegisterMutex       sync.RWMutex
-	mustRegisterArgsForCall []struct {
-		arg1 []prometheus.Collector
 	}
 	UnregisterStub        func(prometheus.Collector) bool
 	unregisterMutex       sync.RWMutex
@@ -38,54 +38,6 @@ type FakeRegisterer struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeRegisterer) Register(arg1 prometheus.Collector) error {
-	fake.registerMutex.Lock()
-	ret, specificReturn := fake.registerReturnsOnCall[len(fake.registerArgsForCall)]
-	fake.registerArgsForCall = append(fake.registerArgsForCall, struct {
-		arg1 prometheus.Collector
-	}{arg1})
-	fake.recordInvocation("Register", []interface{}{arg1})
-	fake.registerMutex.Unlock()
-	if fake.RegisterStub != nil {
-		return fake.RegisterStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.registerReturns.result1
-}
-
-func (fake *FakeRegisterer) RegisterCallCount() int {
-	fake.registerMutex.RLock()
-	defer fake.registerMutex.RUnlock()
-	return len(fake.registerArgsForCall)
-}
-
-func (fake *FakeRegisterer) RegisterArgsForCall(i int) prometheus.Collector {
-	fake.registerMutex.RLock()
-	defer fake.registerMutex.RUnlock()
-	return fake.registerArgsForCall[i].arg1
-}
-
-func (fake *FakeRegisterer) RegisterReturns(result1 error) {
-	fake.RegisterStub = nil
-	fake.registerReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeRegisterer) RegisterReturnsOnCall(i int, result1 error) {
-	fake.RegisterStub = nil
-	if fake.registerReturnsOnCall == nil {
-		fake.registerReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.registerReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakeRegisterer) MustRegister(arg1 ...prometheus.Collector) {
@@ -106,10 +58,77 @@ func (fake *FakeRegisterer) MustRegisterCallCount() int {
 	return len(fake.mustRegisterArgsForCall)
 }
 
+func (fake *FakeRegisterer) MustRegisterCalls(stub func(...prometheus.Collector)) {
+	fake.mustRegisterMutex.Lock()
+	defer fake.mustRegisterMutex.Unlock()
+	fake.MustRegisterStub = stub
+}
+
 func (fake *FakeRegisterer) MustRegisterArgsForCall(i int) []prometheus.Collector {
 	fake.mustRegisterMutex.RLock()
 	defer fake.mustRegisterMutex.RUnlock()
-	return fake.mustRegisterArgsForCall[i].arg1
+	argsForCall := fake.mustRegisterArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRegisterer) Register(arg1 prometheus.Collector) error {
+	fake.registerMutex.Lock()
+	ret, specificReturn := fake.registerReturnsOnCall[len(fake.registerArgsForCall)]
+	fake.registerArgsForCall = append(fake.registerArgsForCall, struct {
+		arg1 prometheus.Collector
+	}{arg1})
+	fake.recordInvocation("Register", []interface{}{arg1})
+	fake.registerMutex.Unlock()
+	if fake.RegisterStub != nil {
+		return fake.RegisterStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.registerReturns
+	return fakeReturns.result1
+}
+
+func (fake *FakeRegisterer) RegisterCallCount() int {
+	fake.registerMutex.RLock()
+	defer fake.registerMutex.RUnlock()
+	return len(fake.registerArgsForCall)
+}
+
+func (fake *FakeRegisterer) RegisterCalls(stub func(prometheus.Collector) error) {
+	fake.registerMutex.Lock()
+	defer fake.registerMutex.Unlock()
+	fake.RegisterStub = stub
+}
+
+func (fake *FakeRegisterer) RegisterArgsForCall(i int) prometheus.Collector {
+	fake.registerMutex.RLock()
+	defer fake.registerMutex.RUnlock()
+	argsForCall := fake.registerArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeRegisterer) RegisterReturns(result1 error) {
+	fake.registerMutex.Lock()
+	defer fake.registerMutex.Unlock()
+	fake.RegisterStub = nil
+	fake.registerReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeRegisterer) RegisterReturnsOnCall(i int, result1 error) {
+	fake.registerMutex.Lock()
+	defer fake.registerMutex.Unlock()
+	fake.RegisterStub = nil
+	if fake.registerReturnsOnCall == nil {
+		fake.registerReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.registerReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeRegisterer) Unregister(arg1 prometheus.Collector) bool {
@@ -126,7 +145,8 @@ func (fake *FakeRegisterer) Unregister(arg1 prometheus.Collector) bool {
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.unregisterReturns.result1
+	fakeReturns := fake.unregisterReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeRegisterer) UnregisterCallCount() int {
@@ -135,13 +155,22 @@ func (fake *FakeRegisterer) UnregisterCallCount() int {
 	return len(fake.unregisterArgsForCall)
 }
 
+func (fake *FakeRegisterer) UnregisterCalls(stub func(prometheus.Collector) bool) {
+	fake.unregisterMutex.Lock()
+	defer fake.unregisterMutex.Unlock()
+	fake.UnregisterStub = stub
+}
+
 func (fake *FakeRegisterer) UnregisterArgsForCall(i int) prometheus.Collector {
 	fake.unregisterMutex.RLock()
 	defer fake.unregisterMutex.RUnlock()
-	return fake.unregisterArgsForCall[i].arg1
+	argsForCall := fake.unregisterArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeRegisterer) UnregisterReturns(result1 bool) {
+	fake.unregisterMutex.Lock()
+	defer fake.unregisterMutex.Unlock()
 	fake.UnregisterStub = nil
 	fake.unregisterReturns = struct {
 		result1 bool
@@ -149,6 +178,8 @@ func (fake *FakeRegisterer) UnregisterReturns(result1 bool) {
 }
 
 func (fake *FakeRegisterer) UnregisterReturnsOnCall(i int, result1 bool) {
+	fake.unregisterMutex.Lock()
+	defer fake.unregisterMutex.Unlock()
 	fake.UnregisterStub = nil
 	if fake.unregisterReturnsOnCall == nil {
 		fake.unregisterReturnsOnCall = make(map[int]struct {
@@ -163,10 +194,10 @@ func (fake *FakeRegisterer) UnregisterReturnsOnCall(i int, result1 bool) {
 func (fake *FakeRegisterer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.registerMutex.RLock()
-	defer fake.registerMutex.RUnlock()
 	fake.mustRegisterMutex.RLock()
 	defer fake.mustRegisterMutex.RUnlock()
+	fake.registerMutex.RLock()
+	defer fake.registerMutex.RUnlock()
 	fake.unregisterMutex.RLock()
 	defer fake.unregisterMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

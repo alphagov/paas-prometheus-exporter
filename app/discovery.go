@@ -78,32 +78,32 @@ func (s *Discovery) run(ctx context.Context) error {
 func (s *Discovery) checkForNewApps(ctx context.Context) error {
 	log.Println("checking for new apps")
 
-	apps, err := s.client.ListAppsWithSpaceAndOrg()
+	apps, err := s.client.ListProcessWithAppsSpaceAndOrg()
 	if err != nil {
 		return err
 	}
 
 	running := map[string]bool{}
 
-	for _, app := range apps {
-		if app.State == "STARTED" {
-			running[app.Guid] = true
+	for _, appwithprocess := range apps {
+		if appwithprocess.App.State == "STARTED" {
+			running[appwithprocess.App.Guid] = true
 
-			if appMetadata, ok := s.appMetadataByGUID[app.Guid]; ok {
-				if appMetadata != newAppMetadata(app) {
+			if appMetadata, ok := s.appMetadataByGUID[appwithprocess.App.Guid]; ok {
+				if appMetadata != newAppMetadata(appwithprocess.App) {
 					// Either the name of the app, the name of it's space or the name of it's org has changed
-					s.deleteWatcher(app.Guid)
-					err := s.createNewWatcher(ctx, app)
+					s.deleteWatcher(appwithprocess.App.Guid)
+					err := s.createNewWatcher(ctx, appwithprocess.App)
 					if err != nil {
 						return err
 					}
 				} else {
 					// notify watcher that instances may have changed
-					s.watchers[app.Guid].UpdateAppInstances(app.Instances)
+					s.watchers[appwithprocess.App.Guid].UpdateAppInstances(appwithprocess.App.Instances)
 				}
 			} else {
 				// new app
-				err := s.createNewWatcher(ctx, app)
+				err := s.createNewWatcher(ctx, appwithprocess.App)
 				if err != nil {
 					return err
 				}

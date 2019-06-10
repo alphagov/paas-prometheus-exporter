@@ -19,7 +19,7 @@ type ServiceInstance struct {
 
 //go:generate counterfeiter -o mocks/client.go . Client
 type Client interface {
-	ListAppsWithSpaceAndOrg() ([]cfclient.App, error)
+	ListProcessWithAppsSpaceAndOrg() ([]AppWithProcesses, error)
 	ListServicesWithSpaceAndOrg() ([]ServiceInstance, error)
 
 	NewAppStreamProvider(appGUID string) AppStreamProvider
@@ -35,6 +35,12 @@ type client struct {
 	logCacheEndpoint string
 }
 
+type AppWithProcesses struct {
+	AppGUID   string
+	Processes []cfclient.Process
+	App       cfclient.App
+}
+
 func NewClient(config *cfclient.Config, logCacheEndpoint string) (Client, error) {
 	cfClient, err := cfclient.NewClient(config)
 	if err != nil {
@@ -48,25 +54,33 @@ func NewClient(config *cfclient.Config, logCacheEndpoint string) (Client, error)
 	}, nil
 }
 
-func (c *client) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
+func (c *client) ListProcessWithAppsSpaceAndOrg() ([]AppWithProcesses, error) {
+	var appswithprocesses []AppWithProcesses
+
 	apps, err := c.cfClient.ListAppsByQuery(url.Values{})
 	if err != nil {
-		return apps, err
+		return appswithprocesses, err
 	}
 	for idx, app := range apps {
 		space, err := app.Space()
 		if err != nil {
-			return apps, err
+			return appswithprocesses, err
 		}
 		org, err := space.Org()
 		if err != nil {
-			return apps, err
+			return appswithprocesses, err
 		}
 		space.OrgData.Entity = org
 		app.SpaceData.Entity = space
 		apps[idx] = app
+		process := AppWithProcesses{
+			AppGUID:   app.Guid,
+			Processes: []cfclient.Process{},
+			App:       app,
+		}
+		appswithprocesses = append(appswithprocesses, process)
 	}
-	return apps, nil
+	return appswithprocesses, nil
 }
 
 func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
