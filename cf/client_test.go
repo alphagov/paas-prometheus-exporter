@@ -33,21 +33,23 @@ var _ = Describe("Client", func() {
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/apps?",
-			httpmock.NewStringResponder(200, `{"resources":[{"entity":{"space_url":"/v2/spaces/some-space"}}]}`),
+			"http://api.bosh-lite.com/v2/organizations?",
+			httpmock.NewStringResponder(200, `{"resources":[{"metadata":{"guid":"some-org-guid"}}]}`),
 		)
+
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/spaces/some-space",
-			httpmock.NewStringResponder(200, `{
+			"http://api.bosh-lite.com/v2/spaces?",
+			httpmock.NewStringResponder(200, `{"resources":[{
 				"metadata":{"guid":"some-space-guid"},
-				"entity":{"organization_url":"/v2/organizations/some-org"}
-			}`),
+				"entity":{"organization_guid":"some-org-guid"}
+			}]}`),
 		)
+
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/organizations/some-org",
-			httpmock.NewStringResponder(200, `{"metadata":{"guid":"some-org-guid"}}`),
+			"http://api.bosh-lite.com/v2/apps?",
+			httpmock.NewStringResponder(200, `{"resources":[{"entity":{"space_guid":"some-space-guid","organization_guid":"some-org-guid"}}]}`),
 		)
 
 		apps, err := client.ListAppsWithSpaceAndOrg()
@@ -68,21 +70,22 @@ var _ = Describe("Client", func() {
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/service_instances?",
-			httpmock.NewStringResponder(200, `{"resources":[{"entity": {"space_guid":"some-space"}}]}`),
+			"http://api.bosh-lite.com/v2/organizations?",
+			httpmock.NewStringResponder(200, `{"resources":[{"metadata":{"guid":"some-org-guid"}}]}`),
 		)
+
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/spaces/some-space",
-			httpmock.NewStringResponder(200, `{
+			"http://api.bosh-lite.com/v2/spaces?",
+			httpmock.NewStringResponder(200, `{"resources":[{
 				"metadata":{"guid":"some-space-guid"},
-				"entity":{"organization_url":"/v2/organizations/some-org"}
-			}`),
+				"entity":{"organization_guid":"some-org-guid"}
+			}]}`),
 		)
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/organizations/some-org",
-			httpmock.NewStringResponder(200, `{"metadata":{"guid":"some-org-guid"}}`),
+			"http://api.bosh-lite.com/v2/service_instances?",
+			httpmock.NewStringResponder(200, `{"resources":[{"entity": {"space_guid":"some-space-guid"}}]}`),
 		)
 
 		services, err := client.ListServicesWithSpaceAndOrg()
