@@ -48,19 +48,53 @@ func NewClient(config *cfclient.Config, logCacheEndpoint string) (Client, error)
 	}, nil
 }
 
+func (c *client) getOrgsAndSpacesByGuid() (map[string]cfclient.Org, map[string]cfclient.Space, error) {
+	orgs, err := c.cfClient.ListOrgs()
+	if err != nil {
+		return nil, nil, err
+	}
+	orgsByGuid := map[string]cfclient.Org{}
+	for _, org := range orgs {
+		orgsByGuid[org.Guid] = org
+	}
+	spaces, err := c.cfClient.ListSpaces()
+	if err != nil {
+		return orgsByGuid, nil, err
+	}
+	spacesByGuid := map[string]cfclient.Space{}
+	for _, space := range spaces {
+		spacesByGuid[space.Guid] = space
+	}
+	return orgsByGuid, spacesByGuid, nil
+}
+
 func (c *client) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
+	orgsByGuid, spacesByGuid, err := c.getOrgsAndSpacesByGuid()
+	if err != nil {
+		return nil, err
+	}
+
 	apps, err := c.cfClient.ListAppsByQuery(url.Values{})
 	if err != nil {
 		return apps, err
 	}
 	for idx, app := range apps {
-		space, err := app.Space()
-		if err != nil {
-			return apps, err
+		space, ok := spacesByGuid[app.SpaceGuid]
+		if !ok {
+			return apps, fmt.Errorf(
+				"could not find a space for app %s, space guid %s",
+				app.Guid,
+				app.SpaceGuid,
+			)
 		}
-		org, err := space.Org()
-		if err != nil {
-			return apps, err
+		org, ok := orgsByGuid[space.OrganizationGuid]
+		if !ok {
+			return apps, fmt.Errorf(
+				"could not find an org for app %s in space %s, org guid %s",
+				app.Guid,
+				space.Guid,
+				space.OrganizationGuid,
+			)
 		}
 		space.OrgData.Entity = org
 		app.SpaceData.Entity = space
@@ -70,19 +104,33 @@ func (c *client) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
 }
 
 func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
+	orgsByGuid, spacesByGuid, err := c.getOrgsAndSpacesByGuid()
+	if err != nil {
+		return nil, err
+	}
+
 	services, err := c.cfClient.ListServiceInstances()
 	if err != nil {
 		return nil, err
 	}
 	resultServices := []ServiceInstance{}
 	for _, service := range services {
-		space, err := c.cfClient.GetSpaceByGuid(service.SpaceGuid)
-		if err != nil {
-			return nil, err
+		space, ok := spacesByGuid[service.SpaceGuid]
+		if !ok {
+			return nil, fmt.Errorf(
+				"could not find a space for service %s, space guid %s",
+				service.Guid,
+				service.SpaceGuid,
+			)
 		}
-		org, err := space.Org()
-		if err != nil {
-			return nil, err
+		org, ok := orgsByGuid[space.OrganizationGuid]
+		if !ok {
+			return nil, fmt.Errorf(
+				"could not find a org for service %s in space %s, org guid %s",
+				service.Guid,
+				service.SpaceGuid,
+				space.OrganizationGuid,
+			)
 		}
 		space.OrgData.Entity = org
 

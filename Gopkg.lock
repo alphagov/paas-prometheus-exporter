@@ -168,6 +168,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:cca5705493135a0dcb7134cf28baac3953137fc3dfc2ae8738eb508fb2f5f430"
+  name = "github.com/jarcoal/httpmock"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ac2099de8d3789d30b99b740d1a9d242097462df"
+  version = "v1.0.4"
+
+[[projects]]
   digest = "1:5985ef4caf91ece5d54817c11ea25f182697534f8ae6521eadcd628c142ac4b6"
   name = "github.com/matttproud/golang_protobuf_extensions"
   packages = ["pbutil"]
@@ -465,6 +473,7 @@
     "github.com/cloudfoundry-community/go-cfclient",
     "github.com/cloudfoundry/noaa/consumer",
     "github.com/cloudfoundry/sonde-go/events",
+    "github.com/jarcoal/httpmock",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/gomega",
