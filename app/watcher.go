@@ -280,6 +280,10 @@ func (w *Watcher) processLogMessage(logMessage *sonde_events.LogMessage) error {
 }
 
 func (w *Watcher) processHttpStartStopMetric(httpStartStop *sonde_events.HttpStartStop) {
+	if httpStartStop.PeerType != nil && *httpStartStop.PeerType == sonde_events.PeerType_Server {
+		return
+	}
+
 	responseDuration := time.Duration(httpStartStop.GetStopTimestamp() - httpStartStop.GetStartTimestamp()).Seconds()
 	index := int(httpStartStop.GetInstanceIndex())
 	if index < len(w.MetricsForInstance) {
