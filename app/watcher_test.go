@@ -268,8 +268,63 @@ var _ = Describe("AppWatcher", func() {
 			Entry("increments the 5xx request metric", "5xx", int32(507)),
 		)
 
-		// TODO: should we test the error paths?
-		// how do we test them? As they are no handled but simply bubble up and then ignored
+		It("does not mutate the HTTP metrics when receiving an HTTPStopStart message with peerType = Server", func(){
+			eventType := sonde_events.Envelope_HttpStartStop
+			startTimestamp := int64(0)
+			stopTimestamp := int64(11 * time.Millisecond)
+			serverPeerType := sonde_events.PeerType_Server
+			clientPeerType := sonde_events.PeerType_Client
+			getMethod := sonde_events.Method_GET
+			statusCode := int32(200)
+
+			serverMessageEnvelope := sonde_events.Envelope{
+				EventType: &eventType,
+				HttpStartStop: &sonde_events.HttpStartStop{
+					StartTimestamp: &startTimestamp,
+					StopTimestamp: &stopTimestamp,
+					PeerType: &serverPeerType,
+					Method: &getMethod,
+					Uri: str("/"),
+					StatusCode: &statusCode,
+				},
+			}
+
+			clientMessageEnvelope := sonde_events.Envelope{
+				EventType: &eventType,
+				HttpStartStop: &sonde_events.HttpStartStop{
+					StartTimestamp: &startTimestamp,
+					StopTimestamp: &stopTimestamp,
+					PeerType: &clientPeerType,
+					Method: &getMethod,
+					Uri: str("/"),
+					StatusCode: &statusCode,
+				},
+			}
+
+			original2xxCount := float64(0)
+			for _, metric := range appWatcher.MetricsForInstance {
+				requestCounter, _ := metric.Requests.GetMetricWithLabelValues("2xx")
+				original2xxCount = original2xxCount + testutil.ToFloat64(requestCounter)
+			}
+
+			// We send two messages through the channel
+			// so that we can verify that the number of
+			// requests is only incremented by one
+			sondeEventChan <- &serverMessageEnvelope
+			sondeEventChan <- &clientMessageEnvelope
+
+			Eventually(func() float64{
+				total2xxCount := float64(0)
+				for _, metric := range appWatcher.MetricsForInstance {
+					requestCounter, _ := metric.Requests.GetMetricWithLabelValues("2xx")
+					total2xxCount = total2xxCount + testutil.ToFloat64(requestCounter)
+				}
+
+				return total2xxCount
+			}).Should(
+				Equal(original2xxCount + 1),
+			)
+		})
 	})
 })
 
