@@ -72,14 +72,7 @@ With each update of the PaaS Prometheus Exporter you should update the version n
 
 ## Testing
 
-To run the test suite, first make sure you have ginkgo and gomega installed:
-
-```
-go get github.com/onsi/ginkgo/ginkgo
-go get github.com/onsi/gomega
-```
-
-Then run `make test` from the root of this repository.
+To run the test suite, then run `make test` from the root of this repository.
 
 ### Regenerating mocks
 
