@@ -105,7 +105,7 @@ func (w *Watcher) mainLoop(ctx context.Context) error {
 func (w *Watcher) processLogCacheEvents(ctx context.Context) error {
 	envelopes, err := w.logcacheClient.Read(ctx, w.service.Guid, time.Now().Add(-15*time.Minute))
 	if err != nil {
-		return fmt.Errorf("failed to read the log-cache logs: %s", err)
+		return fmt.Errorf("failed to read the log-cache logs for service %s: %s", w.service.Guid, err)
 	}
 	for _, e := range envelopes {
 		if g := e.GetGauge(); g != nil {
