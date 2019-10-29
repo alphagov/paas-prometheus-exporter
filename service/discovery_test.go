@@ -205,11 +205,16 @@ var _ = Describe("Service discovery", func() {
 	It("recreates a service watcher when it has an error", func() {
 		fakeClient.ListServicesWithSpaceAndOrgReturns([]cf.ServiceInstance{serviceFixture}, nil)
 		fakeLogCacheClient.ReadReturns([]*loggregator_v2.Envelope{&gaugeFixture}, nil)
+
+		// Reading from log-cache has retry logic, with max retries set to 3.
+		// Only when all 3 retries have failed will it enter the error state.
 		fakeLogCacheClient.ReadReturnsOnCall(1, nil, errors.New("some error"))
+		fakeLogCacheClient.ReadReturnsOnCall(2, nil, errors.New("some error"))
+		fakeLogCacheClient.ReadReturnsOnCall(3, nil, errors.New("some error"))
 
 		discovery.Start(ctx, errChan)
 
-		Eventually(fakeClient.NewLogCacheClientCallCount).Should(Equal(2))
+		Eventually(fakeClient.NewLogCacheClientCallCount, 10 * time.Second).Should(Equal(2))
 
 		Eventually(func() *dto.Metric {
 			return test.FindMetric(registry, map[string]string{
