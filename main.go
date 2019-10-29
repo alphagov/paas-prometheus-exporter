@@ -123,7 +123,7 @@ func main() {
 
 	for {
 		select {
-		case <-errChan:
+		case err := <-errChan:
 			log.Println(err)
 			cancel()
 		case <-ctx.Done():
