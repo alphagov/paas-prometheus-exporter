@@ -19,6 +19,7 @@ import (
 	"github.com/alphagov/paas-prometheus-exporter/util"
 
 	"github.com/cloudfoundry-community/go-cfclient"
+	cfenv "github.com/cloudfoundry-community/go-cfenv"
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -81,12 +82,32 @@ func main() {
 	build_info.Set(1)
 	prometheus.DefaultRegisterer.MustRegister(build_info)
 
+	vcapplication, err := cfenv.Current()
+	if err != nil {
+		log.Fatal("Could not decode the VCAP_APPLICATION environment variable")
+	}
+
+	appId := vcapplication.AppID
+	appName := vcapplication.Name
+	appIndex := vcapplication.Index
+
+	// We set a unique user agent so we can
+	// identify individual exporters in our logs
+	userAgent := fmt.Sprintf(
+		"paas-prometheus-exporter/%s (app=%s, index=%d, name=%s)",
+		version,
+		appId,
+		appIndex,
+		appName,
+	)
+
 	config := &cfclient.Config{
 		ApiAddress:   *apiEndpoint,
 		Username:     *username,
 		Password:     *password,
 		ClientID:     *clientID,
 		ClientSecret: *clientSecret,
+		UserAgent:    userAgent,
 	}
 	client, err := cf.NewClient(config, *logCacheEndpoint)
 	if err != nil {
