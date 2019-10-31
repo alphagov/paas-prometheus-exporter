@@ -1,6 +1,7 @@
 package service
 
 import (
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"context"
 	"fmt"
 	"log"
@@ -103,9 +104,9 @@ func (w *Watcher) mainLoop(ctx context.Context) error {
 }
 
 func (w *Watcher) processLogCacheEvents(ctx context.Context) error {
-	envelopes, err := w.logcacheClient.Read(ctx, w.service.Guid, time.Now().Add(-15*time.Minute))
+	envelopes, err := readLogsWithRetry(w.logcacheClient, ctx, w.service.Guid, time.Now().Add(-15*time.Minute), 3, 1 * time.Second)
 	if err != nil {
-		return fmt.Errorf("failed to read the log-cache logs: %s", err)
+		return fmt.Errorf("failed to read the log-cache logs for service %s after all retries: %s", w.service.Guid, err)
 	}
 	for _, e := range envelopes {
 		if g := e.GetGauge(); g != nil {
@@ -153,4 +154,34 @@ func (w *Watcher) Close() {
 		log.Fatal("Watcher.Close() called without Start()")
 	}
 	w.cancel()
+}
+
+func readLogsWithRetry(
+	client cf.LogCacheClient,
+	ctx context.Context,
+	serviceGuid string,
+	start time.Time,
+	maxRetries int,
+	fallOffSeconds time.Duration,
+) ([]*loggregator_v2.Envelope, error) {
+	var (
+		i         int
+		envelopes []*loggregator_v2.Envelope
+		err       error
+	)
+
+	for i = 0; i < maxRetries; i++ {
+		envelopes, err = client.Read(ctx, serviceGuid, start)
+
+		if err != nil {
+			log.Printf("reading log-cache lines for service %s failed (attempt %d of %d). Error: %s", serviceGuid, i+1, maxRetries, err.Error())
+
+			sleep := time.Duration(float64(i+1) * fallOffSeconds.Seconds())
+			time.Sleep(sleep)
+			continue
+		}
+		return envelopes, nil
+	}
+
+	return envelopes, err
 }
