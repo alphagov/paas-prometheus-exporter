@@ -144,9 +144,17 @@ func main() {
 
 	for {
 		select {
+
 		case err := <-errChan:
 			log.Println(err)
 			cancel()
+
+			defer func() {
+				// This will appear as a CF app crash when the app encounters an error
+				log.Println("cancel upon error finished. exiting with status code 1")
+				os.Exit(1)
+			}()
+
 		case <-ctx.Done():
 			log.Println("exiting")
 			shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
