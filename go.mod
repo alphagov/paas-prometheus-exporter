@@ -1,6 +1,6 @@
 module github.com/alphagov/paas-prometheus-exporter
 
-go 1.13
+go 1.15
 
 require (
 	code.cloudfoundry.org/go-loggregator v7.4.0+incompatible
