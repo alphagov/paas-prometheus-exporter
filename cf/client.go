@@ -1,10 +1,13 @@
 package cf
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -51,21 +54,54 @@ func NewClient(config *cfclient.Config, logCacheEndpoint string) (Client, error)
 }
 
 func (c *client) getOrgsAndSpacesByGuid() (map[string]cfclient.Org, map[string]cfclient.Space, error) {
-	orgs, err := c.cfClient.ListOrgs()
-	if err != nil {
-		return nil, nil, err
-	}
-	orgsByGuid := map[string]cfclient.Org{}
-	for _, org := range orgs {
-		orgsByGuid[org.Guid] = org
-	}
-	spaces, err := c.cfClient.ListSpaces()
-	if err != nil {
-		return orgsByGuid, nil, err
-	}
+	var envOrgs = os.Getenv("ENV_ORGS")
+	var envSpaces = os.Getenv("ENV_SPACES")
+
+	org := cfclient.Org{}
+	err := errors.New("")
+
 	spacesByGuid := map[string]cfclient.Space{}
-	for _, space := range spaces {
-		spacesByGuid[space.Guid] = space
+	orgsByGuid := map[string]cfclient.Org{}
+
+	if envOrgs != "" {
+		orgNames := strings.Split(envOrgs, ",")
+		for _, orgName := range orgNames {
+			org, err = c.cfClient.GetOrgByName(orgName)
+			if err != nil {
+				log.Printf(err.Error())
+				return nil, nil, err
+			}
+			orgsByGuid[org.Guid] = org
+		}
+	} else {
+		orgs, err := c.cfClient.ListOrgs()
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, org := range orgs {
+			orgsByGuid[org.Guid] = org
+		}
+	}
+	if envSpaces != "" {
+		spaceNames := strings.Split(envSpaces, ",")
+		for _, spaceName := range spaceNames {
+			for _, orgByGuid := range orgsByGuid {
+				space, err := c.cfClient.GetSpaceByName(spaceName, orgByGuid.Guid)
+				if err != nil {
+					log.Printf(err.Error())
+				} else {
+					spacesByGuid[space.Guid] = space
+				}
+			}
+		}
+	} else {
+		spaces, err := c.cfClient.ListSpaces()
+		if err != nil {
+			return orgsByGuid, nil, err
+		}
+		for _, space := range spaces {
+			spacesByGuid[space.Guid] = space
+		}
 	}
 	return orgsByGuid, spacesByGuid, nil
 }
@@ -77,32 +113,25 @@ func (c *client) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
 	}
 
 	apps, err := c.cfClient.ListAppsByQuery(url.Values{})
+	resultApps := []cfclient.App{}
 	if err != nil {
 		return apps, err
 	}
 	for idx, app := range apps {
 		space, ok := spacesByGuid[app.SpaceGuid]
 		if !ok {
-			return apps, fmt.Errorf(
-				"could not find a space for app %s, space guid %s",
-				app.Guid,
-				app.SpaceGuid,
-			)
+			continue
 		}
 		org, ok := orgsByGuid[space.OrganizationGuid]
 		if !ok {
-			return apps, fmt.Errorf(
-				"could not find an org for app %s in space %s, org guid %s",
-				app.Guid,
-				space.Guid,
-				space.OrganizationGuid,
-			)
+			continue
 		}
 		space.OrgData.Entity = org
 		app.SpaceData.Entity = space
 		apps[idx] = app
+		resultApps = append(resultApps, apps[idx])
 	}
-	return apps, nil
+	return resultApps, nil
 }
 
 func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
@@ -110,7 +139,6 @@ func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	services, err := c.cfClient.ListServiceInstances()
 	if err != nil {
 		return nil, err
@@ -119,20 +147,11 @@ func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
 	for _, service := range services {
 		space, ok := spacesByGuid[service.SpaceGuid]
 		if !ok {
-			return nil, fmt.Errorf(
-				"could not find a space for service %s, space guid %s",
-				service.Guid,
-				service.SpaceGuid,
-			)
+			continue
 		}
 		org, ok := orgsByGuid[space.OrganizationGuid]
 		if !ok {
-			return nil, fmt.Errorf(
-				"could not find a org for service %s in space %s, org guid %s",
-				service.Guid,
-				service.SpaceGuid,
-				space.OrganizationGuid,
-			)
+			continue
 		}
 		space.OrgData.Entity = org
 
@@ -212,7 +231,7 @@ func getTokenWithRetry(tokenSource oauth2.TokenSource, maxRetries int, fallOffSe
 		if err != nil {
 			log.Printf("getting token failed (attempt %d of %d). Retrying. Error: %s", i+1, maxRetries, err.Error())
 
-			sleep := time.Duration(fallOffSeconds.Seconds() * float64(i + 1))
+			sleep := time.Duration(fallOffSeconds.Seconds() * float64(i+1))
 			time.Sleep(sleep)
 			continue
 		}

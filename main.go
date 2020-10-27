@@ -30,6 +30,8 @@ var (
 	logCacheEndpoint   = kingpin.Flag("logcache-endpoint", "LogCache endpoint").Default("").OverrideDefaultFromEnvar("LOGCACHE_ENDPOINT").String()
 	username           = kingpin.Flag("username", "UAA username.").Default("").OverrideDefaultFromEnvar("USERNAME").String()
 	password           = kingpin.Flag("password", "UAA password.").Default("").OverrideDefaultFromEnvar("PASSWORD").String()
+	orgs               = kingpin.Flag("orgs", "List of Orgs to monitoring.").Default("").OverrideDefaultFromEnvar("ORGS").String()
+	spaces             = kingpin.Flag("spaces", "List of Spaces to monitoring.").Default("").OverrideDefaultFromEnvar("SPACES").String()
 	clientID           = kingpin.Flag("client-id", "UAA client ID.").Default("").OverrideDefaultFromEnvar("CLIENT_ID").String()
 	clientSecret       = kingpin.Flag("client-secret", "UAA client secret.").Default("").OverrideDefaultFromEnvar("CLIENT_SECRET").String()
 	updateFrequency    = kingpin.Flag("update-frequency", "The time in seconds, that takes between each apps update call.").Default("300").OverrideDefaultFromEnvar("UPDATE_FREQUENCY").Int64()
@@ -57,7 +59,8 @@ func main() {
 	}()
 
 	kingpin.Parse()
-
+	os.Setenv("ENV_ORGS", *orgs)
+	os.Setenv("ENV_SPACES", *spaces)
 	if *logCacheEndpoint == "" {
 		*logCacheEndpoint = strings.Replace(*apiEndpoint, "api.", "log-cache.", 1)
 	}
