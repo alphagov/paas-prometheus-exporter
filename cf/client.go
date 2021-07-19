@@ -14,6 +14,10 @@ import (
 	"github.com/cloudfoundry/noaa/consumer"
 )
 
+var maxItemsPerPage = url.Values{
+	"results-per-page": []string{"100"},
+}
+
 type ServiceInstance struct {
 	cfclient.ServiceInstance
 	SpaceData cfclient.SpaceResource
@@ -51,7 +55,7 @@ func NewClient(config *cfclient.Config, logCacheEndpoint string) (Client, error)
 }
 
 func (c *client) getOrgsAndSpacesByGuid() (map[string]cfclient.Org, map[string]cfclient.Space, error) {
-	orgs, err := c.cfClient.ListOrgs()
+	orgs, err := c.cfClient.ListOrgsByQuery(maxItemsPerPage)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -59,7 +63,7 @@ func (c *client) getOrgsAndSpacesByGuid() (map[string]cfclient.Org, map[string]c
 	for _, org := range orgs {
 		orgsByGuid[org.Guid] = org
 	}
-	spaces, err := c.cfClient.ListSpaces()
+	spaces, err := c.cfClient.ListSpacesByQuery(maxItemsPerPage)
 	if err != nil {
 		return orgsByGuid, nil, err
 	}
@@ -76,7 +80,7 @@ func (c *client) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
 		return nil, err
 	}
 
-	apps, err := c.cfClient.ListAppsByQuery(url.Values{})
+	apps, err := c.cfClient.ListAppsByQuery(maxItemsPerPage)
 	if err != nil {
 		return apps, err
 	}
@@ -111,7 +115,7 @@ func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
 		return nil, err
 	}
 
-	services, err := c.cfClient.ListServiceInstances()
+	services, err := c.cfClient.ListServiceInstancesByQuery(maxItemsPerPage)
 	if err != nil {
 		return nil, err
 	}
