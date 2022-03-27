@@ -19,7 +19,7 @@ require (
 	github.com/gogo/protobuf v1.3.0 // indirect
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.11.2 // indirect
-	github.com/jarcoal/httpmock v1.0.4
+	github.com/jarcoal/httpmock v1.1.0
 	github.com/mailru/easyjson v0.7.0 // indirect
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
