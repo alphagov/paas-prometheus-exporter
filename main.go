@@ -37,6 +37,7 @@ var (
 	prometheusBindPort = kingpin.Flag("prometheus-bind-port", "The port to bind to for prometheus metrics.").Default("8080").OverrideDefaultFromEnvar("PORT").Int()
 	authUsername       = kingpin.Flag("auth-username", "HTTP basic auth username; leave blank to disable basic auth").Default("").OverrideDefaultFromEnvar("AUTH_USERNAME").String()
 	authPassword       = kingpin.Flag("auth-password", "HTTP basic auth password").Default("").OverrideDefaultFromEnvar("AUTH_PASSWORD").String()
+	spaces             = kingpin.Flag("spaces", "Consider apps and services in these space GUIDs only").Default("").String()
 )
 
 type ServiceDiscovery interface {
@@ -109,7 +110,7 @@ func main() {
 		ClientSecret: *clientSecret,
 		UserAgent:    userAgent,
 	}
-	client, err := cf.NewClient(config, *logCacheEndpoint)
+	client, err := cf.NewClient(config, *logCacheEndpoint, cf.WithSpaces(*spaces))
 	if err != nil {
 		log.Fatal(err)
 	}
