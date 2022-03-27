@@ -26,18 +26,18 @@ import (
 
 var (
 	version            = "0.0.5"
-	apiEndpoint        = kingpin.Flag("api-endpoint", "API endpoint").Required().OverrideDefaultFromEnvar("API_ENDPOINT").String()
-	logCacheEndpoint   = kingpin.Flag("logcache-endpoint", "LogCache endpoint").Default("").OverrideDefaultFromEnvar("LOGCACHE_ENDPOINT").String()
-	username           = kingpin.Flag("username", "UAA username.").Default("").OverrideDefaultFromEnvar("USERNAME").String()
-	password           = kingpin.Flag("password", "UAA password.").Default("").OverrideDefaultFromEnvar("PASSWORD").String()
-	clientID           = kingpin.Flag("client-id", "UAA client ID.").Default("").OverrideDefaultFromEnvar("CLIENT_ID").String()
-	clientSecret       = kingpin.Flag("client-secret", "UAA client secret.").Default("").OverrideDefaultFromEnvar("CLIENT_SECRET").String()
-	updateFrequency    = kingpin.Flag("update-frequency", "The time in seconds, that takes between each apps update call.").Default("300").OverrideDefaultFromEnvar("UPDATE_FREQUENCY").Int64()
-	scrapeInterval     = kingpin.Flag("scrape-interval", "The time in seconds, that takes between Prometheus scrapes.").Default("60").OverrideDefaultFromEnvar("SCRAPE_INTERVAL").Int64()
-	prometheusBindPort = kingpin.Flag("prometheus-bind-port", "The port to bind to for prometheus metrics.").Default("8080").OverrideDefaultFromEnvar("PORT").Int()
-	authUsername       = kingpin.Flag("auth-username", "HTTP basic auth username; leave blank to disable basic auth").Default("").OverrideDefaultFromEnvar("AUTH_USERNAME").String()
-	authPassword       = kingpin.Flag("auth-password", "HTTP basic auth password").Default("").OverrideDefaultFromEnvar("AUTH_PASSWORD").String()
-	spaces             = kingpin.Flag("spaces", "Consider apps and services in these space GUIDs only").Default("").String()
+	apiEndpoint        = kingpin.Flag("api-endpoint", "API endpoint").Required().Envar("API_ENDPOINT").String()
+	logCacheEndpoint   = kingpin.Flag("logcache-endpoint", "LogCache endpoint").Default("").Envar("LOGCACHE_ENDPOINT").String()
+	username           = kingpin.Flag("username", "UAA username.").Default("").Envar("USERNAME").String()
+	password           = kingpin.Flag("password", "UAA password.").Default("").Envar("PASSWORD").String()
+	clientID           = kingpin.Flag("client-id", "UAA client ID.").Default("").Envar("CLIENT_ID").String()
+	clientSecret       = kingpin.Flag("client-secret", "UAA client secret.").Default("").Envar("CLIENT_SECRET").String()
+	updateFrequency    = kingpin.Flag("update-frequency", "The time in seconds, that takes between each apps update call.").Default("300").Envar("UPDATE_FREQUENCY").Int64()
+	scrapeInterval     = kingpin.Flag("scrape-interval", "The time in seconds, that takes between Prometheus scrapes.").Default("60").Envar("SCRAPE_INTERVAL").Int64()
+	prometheusBindPort = kingpin.Flag("prometheus-bind-port", "The port to bind to for prometheus metrics.").Default("8080").Envar("PORT").Int()
+	authUsername       = kingpin.Flag("auth-username", "HTTP basic auth username; leave blank to disable basic auth").Default("").Envar("AUTH_USERNAME").String()
+	authPassword       = kingpin.Flag("auth-password", "HTTP basic auth password").Default("").Envar("AUTH_PASSWORD").String()
+	spaces             = kingpin.Flag("spaces", "Consider apps and services in these space GUIDs only").Default("").Envar("SPACES").String()
 )
 
 type ServiceDiscovery interface {
