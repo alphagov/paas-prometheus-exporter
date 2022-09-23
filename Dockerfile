@@ -1,4 +1,4 @@
-FROM golang:1.17beta1-alpine3.12 as builder
+FROM golang:1.19-alpine3.16 as builder
 WORKDIR /root/paas-prometheus-exporter
 COPY . .
 RUN go build
