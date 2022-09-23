@@ -2,15 +2,9 @@ package cf
 
 import (
 	"fmt"
-	"log"
-	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
-	"golang.org/x/oauth2"
-
-	logcache "code.cloudfoundry.org/log-cache/pkg/client"
 	cfclient "github.com/cloudfoundry-community/go-cfclient"
 	"github.com/cloudfoundry/noaa/consumer"
 )
@@ -29,7 +23,6 @@ type Client interface {
 	GetToken() (token string, authError error)
 	consumer.TokenRefresher
 	DopplerEndpoint() string
-	NewLogCacheClient() LogCacheClient
 }
 
 type OptionFunc func(c *client) error
@@ -205,53 +198,4 @@ func (c *client) GetToken() (token string, authError error) {
 
 func (c *client) DopplerEndpoint() string {
 	return c.cfClient.Endpoint.DopplerEndpoint
-}
-
-func (c *client) NewLogCacheClient() LogCacheClient {
-	return logcache.NewClient(c.logCacheEndpoint,
-		logcache.WithHTTPClient(&logCacheHTTPClient{
-			tokenSource: c.cfClient.Config.TokenSource,
-			client:      http.DefaultClient,
-		}),
-	)
-}
-
-type logCacheHTTPClient struct {
-	tokenSource oauth2.TokenSource
-	client      *http.Client
-}
-
-func (l *logCacheHTTPClient) Do(req *http.Request) (*http.Response, error) {
-	token, err := getTokenWithRetry(l.tokenSource, 3, 1*time.Second)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get token: %s", err)
-	}
-
-	authHeader := fmt.Sprintf("bearer %s", token.AccessToken)
-	req.Header.Set("Authorization", authHeader)
-
-	return l.client.Do(req)
-}
-
-func getTokenWithRetry(tokenSource oauth2.TokenSource, maxRetries int, fallOffSeconds time.Duration) (*oauth2.Token, error) {
-	var (
-		i     int
-		token *oauth2.Token
-		err   error
-	)
-
-	for i = 0; i < maxRetries; i++ {
-		token, err = tokenSource.Token()
-
-		if err != nil {
-			log.Printf("getting token failed (attempt %d of %d). Retrying. Error: %s", i+1, maxRetries, err.Error())
-
-			sleep := time.Duration(fallOffSeconds.Seconds() * float64(i+1))
-			time.Sleep(sleep)
-			continue
-		}
-		return token, nil
-	}
-
-	return token, err
 }

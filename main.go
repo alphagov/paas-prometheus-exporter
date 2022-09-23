@@ -15,7 +15,6 @@ import (
 
 	"github.com/alphagov/paas-prometheus-exporter/app"
 	"github.com/alphagov/paas-prometheus-exporter/cf"
-	"github.com/alphagov/paas-prometheus-exporter/service"
 	"github.com/alphagov/paas-prometheus-exporter/util"
 
 	"github.com/cloudfoundry-community/go-cfclient"
@@ -39,11 +38,6 @@ var (
 	authPassword       = kingpin.Flag("auth-password", "HTTP basic auth password").Default("").Envar("AUTH_PASSWORD").String()
 	spaces             = kingpin.Flag("spaces", "Consider apps and services in these space GUIDs only").Default("").Envar("SPACES").String()
 )
-
-type ServiceDiscovery interface {
-	Start()
-	Stop()
-}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -124,15 +118,6 @@ func main() {
 	)
 
 	appDiscovery.Start(ctx, errChan)
-
-	serviceDiscovery := service.NewDiscovery(
-		client,
-		prometheus.DefaultRegisterer,
-		time.Duration(*updateFrequency)*time.Second,
-		time.Duration(*scrapeInterval)*time.Second,
-	)
-
-	serviceDiscovery.Start(ctx, errChan)
 
 	server := buildHTTPServer(*prometheusBindPort, promhttp.Handler(), *authUsername, *authPassword)
 
