@@ -41,7 +41,7 @@ require (
 	github.com/prometheus/common v0.6.0 // indirect
 	github.com/prometheus/procfs v0.0.3 // indirect
 	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980 // indirect
-	golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3 // indirect
+	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.3.0 // indirect
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190916214212-f660b8655731 // indirect
