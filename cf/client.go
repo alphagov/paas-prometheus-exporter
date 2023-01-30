@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -31,23 +32,44 @@ type Client interface {
 	NewLogCacheClient() LogCacheClient
 }
 
+type OptionFunc func(c *client) error
+
 type client struct {
 	config           *cfclient.Config
 	cfClient         *cfclient.Client
+	spaces           []string
 	logCacheEndpoint string
 }
 
-func NewClient(config *cfclient.Config, logCacheEndpoint string) (Client, error) {
+func WithSpaces(spaces string) OptionFunc {
+	list := strings.Split(spaces, ",")
+	if len(list) == 1 && list[0] == "" {
+		list = []string{}
+	}
+
+	return func(c *client) error {
+		c.spaces = list
+		return nil
+	}
+}
+
+func NewClient(config *cfclient.Config, logCacheEndpoint string, opts ...OptionFunc) (Client, error) {
 	cfClient, err := cfclient.NewClient(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &client{
+	client := &client{
 		config:           config,
 		cfClient:         cfClient,
 		logCacheEndpoint: logCacheEndpoint,
-	}, nil
+	}
+	for _, o := range opts {
+		if err := o(client); err != nil {
+			return nil, err
+		}
+	}
+	return client, nil
 }
 
 func (c *client) getOrgsAndSpacesByGuid() (map[string]cfclient.Org, map[string]cfclient.Space, error) {
@@ -76,7 +98,13 @@ func (c *client) ListAppsWithSpaceAndOrg() ([]cfclient.App, error) {
 		return nil, err
 	}
 
-	apps, err := c.cfClient.ListAppsByQuery(url.Values{})
+	queryParams := url.Values{}
+
+	if len(c.spaces) > 0 {
+		queryParams.Add("q", fmt.Sprintf("space_guid IN %s", strings.Join(c.spaces, ",")))
+	}
+
+	apps, err := c.cfClient.ListAppsByQuery(queryParams)
 	if err != nil {
 		return apps, err
 	}
@@ -111,11 +139,17 @@ func (c *client) ListServicesWithSpaceAndOrg() ([]ServiceInstance, error) {
 		return nil, err
 	}
 
-	services, err := c.cfClient.ListServiceInstances()
+	queryParams := url.Values{}
+
+	if len(c.spaces) > 0 {
+		queryParams.Add("q", fmt.Sprintf("space_guid IN %s", strings.Join(c.spaces, ",")))
+	}
+
+	services, err := c.cfClient.ListServiceInstancesByQuery(queryParams)
 	if err != nil {
 		return nil, err
 	}
-	resultServices := []ServiceInstance{}
+	var resultServices []ServiceInstance
 	for _, service := range services {
 		space, ok := spacesByGuid[service.SpaceGuid]
 		if !ok {
@@ -212,7 +246,7 @@ func getTokenWithRetry(tokenSource oauth2.TokenSource, maxRetries int, fallOffSe
 		if err != nil {
 			log.Printf("getting token failed (attempt %d of %d). Retrying. Error: %s", i+1, maxRetries, err.Error())
 
-			sleep := time.Duration(fallOffSeconds.Seconds() * float64(i + 1))
+			sleep := time.Duration(fallOffSeconds.Seconds() * float64(i+1))
 			time.Sleep(sleep)
 			continue
 		}
