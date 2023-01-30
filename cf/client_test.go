@@ -33,13 +33,13 @@ var _ = Describe("Client", func() {
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/organizations?",
+			"http://api.bosh-lite.com/v2/organizations?results-per-page=100",
 			httpmock.NewStringResponder(200, `{"resources":[{"metadata":{"guid":"some-org-guid"}}]}`),
 		)
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/spaces?",
+			"http://api.bosh-lite.com/v2/spaces?results-per-page=100",
 			httpmock.NewStringResponder(200, `{"resources":[{
 				"metadata":{"guid":"some-space-guid"},
 				"entity":{"organization_guid":"some-org-guid"}
@@ -48,7 +48,7 @@ var _ = Describe("Client", func() {
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/apps?",
+			"http://api.bosh-lite.com/v2/apps?results-per-page=100",
 			httpmock.NewStringResponder(200, `{"resources":[{"entity":{"space_guid":"some-space-guid","organization_guid":"some-org-guid"}}]}`),
 		)
 
@@ -70,13 +70,13 @@ var _ = Describe("Client", func() {
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/organizations?",
+			"http://api.bosh-lite.com/v2/organizations?results-per-page=100",
 			httpmock.NewStringResponder(200, `{"resources":[{"metadata":{"guid":"some-org-guid"}}]}`),
 		)
 
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/spaces?",
+			"http://api.bosh-lite.com/v2/spaces?results-per-page=100",
 			httpmock.NewStringResponder(200, `{"resources":[{
 				"metadata":{"guid":"some-space-guid"},
 				"entity":{"organization_guid":"some-org-guid"}
@@ -84,7 +84,7 @@ var _ = Describe("Client", func() {
 		)
 		httpmock.RegisterResponder(
 			"GET",
-			"http://api.bosh-lite.com/v2/service_instances?",
+			"http://api.bosh-lite.com/v2/service_instances?results-per-page=100",
 			httpmock.NewStringResponder(200, `{"resources":[{"entity": {"space_guid":"some-space-guid"}}]}`),
 		)
 
