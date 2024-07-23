@@ -1,3 +1,5 @@
+**This repo is no longer in use and has been archived**
+
 # paas-prometheus-exporter
 
 This application consumes application and service metrics from Cloud Foundry. All the metrics are exposed on a  `/metrics` endpoint for a Prometheus server to scrape.
